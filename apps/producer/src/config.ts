@@ -1,4 +1,6 @@
 import { config as loadEnv } from 'dotenv';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
 import {
   PRODUCER_PORT,
   USDG_CONTRACT,
@@ -6,7 +8,11 @@ import {
   OKX_FACILITATOR_BASE,
 } from '@x402/shared';
 
-loadEnv();
+// Resolve .env relative to this source file so the loader works regardless
+// of which directory pnpm filters into when running `dev:producer`.
+// apps/producer/src/config.ts -> ../../../.env (repo root)
+const currentDir = path.dirname(fileURLToPath(import.meta.url));
+loadEnv({ path: path.resolve(currentDir, '../../../.env') });
 
 function requireEnv(name: string): string {
   const value = process.env[name];
