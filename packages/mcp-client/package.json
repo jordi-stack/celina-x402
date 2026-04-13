@@ -10,7 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@x402/shared": "workspace:*"
+    "@x402/shared": "workspace:*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "typescript": "^5.6.0",
