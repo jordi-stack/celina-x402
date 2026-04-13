@@ -1,0 +1,22 @@
+{
+  "name": "x402-earn-pay-earn",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "dev:producer": "pnpm --filter producer dev",
+    "dev:consumer": "pnpm --filter consumer start",
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "health-check": "pnpm --filter @x402/scripts health-check",
+    "demo-runner": "pnpm --filter @x402/scripts demo"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^20.16.0",
+    "vitest": "^2.1.0"
+  }
+}
