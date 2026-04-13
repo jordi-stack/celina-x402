@@ -55,7 +55,7 @@
 
 **Steps:**
 
-- [ ] **Step 1.1: Verify prerequisites (Node, pnpm, pre-existing files, no parent git repo)**
+- [x] **Step 1.1: Verify prerequisites (Node, pnpm, pre-existing files, no parent git repo)**
 
 Run:
 ```bash
@@ -74,7 +74,7 @@ Expected:
 
 If parent git repo exists, STOP. Resolve with user before continuing.
 
-- [ ] **Step 1.2: Initialize git repo BEFORE installing dependencies**
+- [x] **Step 1.2: Initialize git repo BEFORE installing dependencies**
 
 Run:
 ```bash
@@ -85,14 +85,14 @@ git status
 
 Expected: git initialized, `.gitignore` and `.env.example` appear as untracked. `node_modules/` should NOT appear (because `.gitignore` already excludes it from the start).
 
-- [ ] **Step 1.3: Create `.nvmrc`**
+- [x] **Step 1.3: Create `.nvmrc`**
 
 Create file `.nvmrc` with content:
 ```
 20
 ```
 
-- [ ] **Step 1.4: Create root `package.json`**
+- [x] **Step 1.4: Create root `package.json`**
 
 Create file `package.json` with content:
 ```json
@@ -120,7 +120,7 @@ Create file `package.json` with content:
 }
 ```
 
-- [ ] **Step 1.5: Create `pnpm-workspace.yaml`**
+- [x] **Step 1.5: Create `pnpm-workspace.yaml`**
 
 Create file `pnpm-workspace.yaml` with content:
 ```yaml
@@ -130,7 +130,7 @@ packages:
   - "scripts"
 ```
 
-- [ ] **Step 1.6: Create `tsconfig.base.json`**
+- [x] **Step 1.6: Create `tsconfig.base.json`**
 
 Create file `tsconfig.base.json` with content:
 ```json
@@ -154,7 +154,7 @@ Create file `tsconfig.base.json` with content:
 }
 ```
 
-- [ ] **Step 1.7: Create minimal `README.md`**
+- [x] **Step 1.7: Create minimal `README.md`**
 
 Create file `README.md` with content:
 ```markdown
@@ -177,7 +177,7 @@ pnpm demo-runner
 Details to be expanded in Chunk 7.
 ```
 
-- [ ] **Step 1.8: Install root dev dependencies**
+- [x] **Step 1.8: Install root dev dependencies**
 
 Run:
 ```bash
@@ -187,7 +187,7 @@ pnpm install
 
 Expected: creates `node_modules/` and `pnpm-lock.yaml`, zero errors. Warnings about missing workspace packages are OK because we haven't created them yet. `node_modules/` should be git-ignored automatically via the pre-existing `.gitignore`.
 
-- [ ] **Step 1.9: Verify install**
+- [x] **Step 1.9: Verify install**
 
 Run:
 ```bash
@@ -198,7 +198,7 @@ git status
 
 Expected: version printed, some packages installed under `.pnpm`. `git status` should NOT show `node_modules/` as untracked (should be gitignored). Only `.nvmrc`, `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `README.md`, `pnpm-lock.yaml` appear as new/untracked.
 
-- [ ] **Step 1.10: Commit**
+- [x] **Step 1.10: Commit**
 
 ```bash
 git add .gitignore .env.example README.md package.json pnpm-workspace.yaml tsconfig.base.json .nvmrc pnpm-lock.yaml docs/
@@ -223,7 +223,7 @@ Expected: commit succeeds, no node_modules in staged files.
 
 **Steps:**
 
-- [ ] **Step 2.1: Create package.json**
+- [x] **Step 2.1: Create package.json**
 
 Create file `packages/shared/package.json`:
 ```json
@@ -249,7 +249,7 @@ Create file `packages/shared/package.json`:
 }
 ```
 
-- [ ] **Step 2.2: Create tsconfig.json**
+- [x] **Step 2.2: Create tsconfig.json**
 
 Create file `packages/shared/tsconfig.json`:
 ```json
@@ -263,7 +263,7 @@ Create file `packages/shared/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 2.3: Create constants.ts**
+- [x] **Step 2.3: Create constants.ts**
 
 Create file `packages/shared/src/constants.ts`:
 ```typescript
@@ -298,7 +298,7 @@ export const PRODUCER_PORT = 3001;
 export const DASHBOARD_PORT = 3000;
 ```
 
-- [ ] **Step 2.4: Create types/x402.ts**
+- [x] **Step 2.4: Create types/x402.ts**
 
 Create file `packages/shared/src/types/x402.ts`:
 ```typescript
@@ -357,7 +357,7 @@ export const Challenge402Schema = z.object({
 export type Challenge402 = z.infer<typeof Challenge402Schema>;
 ```
 
-- [ ] **Step 2.5: Create types/facilitator.ts**
+- [x] **Step 2.5: Create types/facilitator.ts**
 
 Create file `packages/shared/src/types/facilitator.ts`:
 ```typescript
@@ -424,7 +424,7 @@ export const OkxApiEnvelopeSchema = z.object({
 export type OkxApiEnvelope = z.infer<typeof OkxApiEnvelopeSchema>;
 ```
 
-- [ ] **Step 2.6: Create types/mcp.ts**
+- [x] **Step 2.6: Create types/mcp.ts**
 
 Create file `packages/shared/src/types/mcp.ts`:
 ```typescript
@@ -528,7 +528,7 @@ export const McpJsonRpcResponseSchema = z.object({
 export type McpJsonRpcResponse = z.infer<typeof McpJsonRpcResponseSchema>;
 ```
 
-- [ ] **Step 2.7: Create types/agent.ts**
+- [x] **Step 2.7: Create types/agent.ts**
 
 Create file `packages/shared/src/types/agent.ts`:
 ```typescript
@@ -582,7 +582,7 @@ export const AuditEventSchema = z.object({
 export type AuditEvent = z.infer<typeof AuditEventSchema>;
 ```
 
-- [ ] **Step 2.8: Create index.ts (barrel)**
+- [x] **Step 2.8: Create index.ts (barrel)**
 
 Create file `packages/shared/src/index.ts`:
 ```typescript
@@ -593,7 +593,7 @@ export * from './types/mcp';
 export * from './types/agent';
 ```
 
-- [ ] **Step 2.9: Install shared package deps + typecheck**
+- [x] **Step 2.9: Install shared package deps + typecheck**
 
 Run:
 ```bash
@@ -604,7 +604,7 @@ pnpm --filter @x402/shared typecheck
 
 Expected: zero TypeScript errors. If errors, fix them before committing.
 
-- [ ] **Step 2.10: Commit**
+- [x] **Step 2.10: Commit**
 
 ```bash
 git add packages/shared/
@@ -624,7 +624,7 @@ git commit -m "feat(shared): add types, constants, and Zod schemas for x402/MCP/
 
 **Steps:**
 
-- [ ] **Step 3.1: Create package.json**
+- [x] **Step 3.1: Create package.json**
 
 Create file `packages/okx-auth/package.json`:
 ```json
@@ -647,7 +647,7 @@ Create file `packages/okx-auth/package.json`:
 }
 ```
 
-- [ ] **Step 3.2: Create tsconfig.json**
+- [x] **Step 3.2: Create tsconfig.json**
 
 Create file `packages/okx-auth/tsconfig.json`:
 ```json
@@ -661,7 +661,7 @@ Create file `packages/okx-auth/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 3.3: Write failing test first**
+- [x] **Step 3.3: Write failing test first**
 
 Create file `packages/okx-auth/tests/sign.test.ts`:
 ```typescript
@@ -834,7 +834,7 @@ describe('signOkxRequest', () => {
 });
 ```
 
-- [ ] **Step 3.4: Run test to verify it fails**
+- [x] **Step 3.4: Run test to verify it fails**
 
 Run:
 ```bash
@@ -843,7 +843,7 @@ pnpm --filter @x402/okx-auth test
 
 Expected: FAIL with "Cannot find module '../src/sign'" or similar. This confirms test is wired up and will drive implementation.
 
-- [ ] **Step 3.5: Create sign.ts (minimal implementation to pass tests)**
+- [x] **Step 3.5: Create sign.ts (minimal implementation to pass tests)**
 
 Create file `packages/okx-auth/src/sign.ts`:
 ```typescript
@@ -893,14 +893,14 @@ function isoTimestampWithMs(): string {
 }
 ```
 
-- [ ] **Step 3.6: Create index.ts (barrel)**
+- [x] **Step 3.6: Create index.ts (barrel)**
 
 Create file `packages/okx-auth/src/index.ts`:
 ```typescript
 export * from './sign';
 ```
 
-- [ ] **Step 3.7: Run tests to verify all pass**
+- [x] **Step 3.7: Run tests to verify all pass**
 
 Run:
 ```bash
@@ -909,7 +909,7 @@ pnpm --filter @x402/okx-auth test
 
 Expected: 9 tests pass, 0 failing.
 
-- [ ] **Step 3.8: Typecheck**
+- [x] **Step 3.8: Typecheck**
 
 Run:
 ```bash
@@ -918,7 +918,7 @@ pnpm --filter @x402/okx-auth typecheck
 
 Expected: zero errors.
 
-- [ ] **Step 3.9: Commit**
+- [x] **Step 3.9: Commit**
 
 ```bash
 git add packages/okx-auth/
@@ -936,7 +936,7 @@ git commit -m "feat(okx-auth): add HMAC-SHA256 signing for OKX REST API with uni
 
 **Steps:**
 
-- [ ] **Step 4.1: Create package.json**
+- [x] **Step 4.1: Create package.json**
 
 Create file `scripts/package.json`:
 ```json
@@ -967,7 +967,7 @@ Create file `scripts/package.json`:
 }
 ```
 
-- [ ] **Step 4.2: Create tsconfig.json**
+- [x] **Step 4.2: Create tsconfig.json**
 
 Create file `scripts/tsconfig.json`:
 ```json
@@ -982,7 +982,7 @@ Create file `scripts/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 4.3: Create spikes README**
+- [x] **Step 4.3: Create spikes README**
 
 Create file `scripts/src/spikes/README.md`:
 ```markdown
@@ -1025,7 +1025,7 @@ pnpm spike:all
 Findings saved to `scripts/src/spikes/findings/`.
 ```
 
-- [ ] **Step 4.4: Create findings directory placeholder**
+- [x] **Step 4.4: Create findings directory placeholder**
 
 Run:
 ```bash
@@ -1033,7 +1033,7 @@ mkdir -p /root/hackathon/okx/x402-earn-pay-earn/scripts/src/spikes/findings
 touch /root/hackathon/okx/x402-earn-pay-earn/scripts/src/spikes/findings/.gitkeep
 ```
 
-- [ ] **Step 4.5: Install deps**
+- [x] **Step 4.5: Install deps**
 
 Run:
 ```bash
@@ -1043,7 +1043,7 @@ pnpm install
 
 Expected: `@x402/scripts` package resolved, tsx installed.
 
-- [ ] **Step 4.6: Commit**
+- [x] **Step 4.6: Commit**
 
 ```bash
 git add scripts/
@@ -1060,7 +1060,7 @@ git commit -m "chore(scripts): scaffold scripts package for spikes + utilities"
 
 **Steps:**
 
-- [ ] **Step 5.1: Create CLI spike script**
+- [x] **Step 5.1: Create CLI spike script**
 
 Create file `scripts/src/spikes/cli-spike.ts`:
 ```typescript
@@ -1233,7 +1233,7 @@ ${f.recommendation}
 run();
 ```
 
-- [ ] **Step 5.2: Add execa dependency**
+- [x] **Step 5.2: Add execa dependency**
 
 Run:
 ```bash
@@ -1243,7 +1243,7 @@ pnpm --filter @x402/scripts add execa
 
 Expected: execa added to `scripts/package.json`.
 
-- [ ] **Step 5.3: Typecheck spike**
+- [x] **Step 5.3: Typecheck spike**
 
 Run:
 ```bash
@@ -1252,14 +1252,14 @@ pnpm --filter @x402/scripts typecheck
 
 Expected: zero errors.
 
-- [ ] **Step 5.4: Commit (before running)**
+- [x] **Step 5.4: Commit (before running)**
 
 ```bash
 git add scripts/
 git commit -m "feat(spike): add Day 1 CLI spike for x402-pay --force verification"
 ```
 
-- [ ] **Step 5.5: Run CLI spike + review findings**
+- [x] **Step 5.5: Run CLI spike + review findings**
 
 Prerequisite: User must have `onchainos` CLI installed and preferably logged in to OKX wallet.
 
@@ -1278,7 +1278,7 @@ Read the findings file: `cat scripts/src/spikes/findings/cli-spike.md`
 
 If HALT recommendation: resolve blockers before moving to next task. Do NOT skip this gate.
 
-- [ ] **Step 5.6: Commit findings**
+- [x] **Step 5.6: Commit findings**
 
 ```bash
 git add scripts/src/spikes/findings/cli-spike.md
@@ -1295,7 +1295,7 @@ git commit -m "docs(spike): CLI spike findings"
 
 **Steps:**
 
-- [ ] **Step 6.1: Create facilitator spike script**
+- [x] **Step 6.1: Create facilitator spike script**
 
 Create file `scripts/src/spikes/facilitator-spike.ts`:
 ```typescript
@@ -1510,7 +1510,7 @@ ${f.recommendation}
 run();
 ```
 
-- [ ] **Step 6.2: Typecheck**
+- [x] **Step 6.2: Typecheck**
 
 Run:
 ```bash
@@ -1519,14 +1519,14 @@ pnpm --filter @x402/scripts typecheck
 
 Expected: zero errors (may need to adjust imports if path resolution fails).
 
-- [ ] **Step 6.3: Commit spike code**
+- [x] **Step 6.3: Commit spike code**
 
 ```bash
 git add scripts/src/spikes/facilitator-spike.ts
 git commit -m "feat(spike): add Day 1 facilitator throughput + happy path spike"
 ```
 
-- [ ] **Step 6.4: Run facilitator spike**
+- [x] **Step 6.4: Run facilitator spike**
 
 Prerequisite: `.env` populated with real OKX credentials.
 
@@ -1543,7 +1543,7 @@ Review findings:
 cat scripts/src/spikes/findings/facilitator-spike.md
 ```
 
-- [ ] **Step 6.5: Commit findings**
+- [x] **Step 6.5: Commit findings**
 
 ```bash
 git add scripts/src/spikes/findings/facilitator-spike.md
@@ -1560,7 +1560,7 @@ git commit -m "docs(spike): facilitator spike findings"
 
 **Steps:**
 
-- [ ] **Step 7.1: Create MCP spike script**
+- [x] **Step 7.1: Create MCP spike script**
 
 Create file `scripts/src/spikes/mcp-spike.ts`:
 ```typescript
@@ -1720,7 +1720,7 @@ function formatFindings(results: ToolResult[]): string {
 run();
 ```
 
-- [ ] **Step 7.2: Typecheck**
+- [x] **Step 7.2: Typecheck**
 
 Run:
 ```bash
@@ -1729,14 +1729,14 @@ pnpm --filter @x402/scripts typecheck
 
 Expected: zero errors.
 
-- [ ] **Step 7.3: Commit spike code**
+- [x] **Step 7.3: Commit spike code**
 
 ```bash
 git add scripts/src/spikes/mcp-spike.ts
 git commit -m "feat(spike): add Day 1 MCP schema capture spike"
 ```
 
-- [ ] **Step 7.4: Run MCP spike**
+- [x] **Step 7.4: Run MCP spike**
 
 Run:
 ```bash
@@ -1751,14 +1751,14 @@ Review:
 cat scripts/src/spikes/findings/mcp-spike.md
 ```
 
-- [ ] **Step 7.5: Commit findings**
+- [x] **Step 7.5: Commit findings**
 
 ```bash
 git add scripts/src/spikes/findings/mcp-spike.md
 git commit -m "docs(spike): MCP schema findings"
 ```
 
-- [ ] **Step 7.6: Update `packages/shared/src/types/mcp.ts` with refined schemas based on captured responses**
+- [x] **Step 7.6: Update `packages/shared/src/types/mcp.ts` with refined schemas based on captured responses**
 
 **Procedure:**
 
@@ -1787,7 +1787,7 @@ pnpm --filter @x402/shared test
 
 Expected: all pass. If schemas break anything downstream (no downstream yet in Chunk 1), stop and resolve.
 
-- [ ] **Step 7.7: Commit refined schemas**
+- [x] **Step 7.7: Commit refined schemas**
 
 ```bash
 git add packages/shared/src/types/mcp.ts
@@ -1798,7 +1798,7 @@ git commit -m "refactor(shared): pin MCP schemas based on Day 1 spike findings"
 
 ### Task 8: Chunk 1 Exit Criteria Check
 
-- [ ] **Step 8.1: Verify all packages typecheck**
+- [x] **Step 8.1: Verify all packages typecheck**
 
 Run:
 ```bash
@@ -1808,7 +1808,7 @@ pnpm -r typecheck
 
 Expected: zero errors across all workspaces.
 
-- [ ] **Step 8.2: Verify tests pass**
+- [x] **Step 8.2: Verify tests pass**
 
 Run:
 ```bash
@@ -1817,7 +1817,7 @@ pnpm -r test
 
 Expected: all unit tests green (okx-auth should have 9 passing tests).
 
-- [ ] **Step 8.3: Verify 3 spike findings exist**
+- [x] **Step 8.3: Verify 3 spike findings exist**
 
 Run:
 ```bash
@@ -1826,11 +1826,11 @@ ls scripts/src/spikes/findings/
 
 Expected: 3 markdown files (`cli-spike.md`, `facilitator-spike.md`, `mcp-spike.md`).
 
-- [ ] **Step 8.4: Review findings for blockers**
+- [x] **Step 8.4: Review findings for blockers**
 
 For each findings file, check the "Recommendation" section. If any say HALT, resolve before proceeding to Chunk 2.
 
-- [ ] **Step 8.5: Verify clean working tree and tag completion**
+- [x] **Step 8.5: Verify clean working tree and tag completion**
 
 Run:
 ```bash
