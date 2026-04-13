@@ -86,15 +86,19 @@ async function run() {
       fromTokenAddress: USDG_CONTRACT,
       toTokenAddress: USDT_CONTRACT,
       amount: '1000000',
-      slippage: '0.005',
+      swapMode: 'exactIn',
     })
   );
 
   console.log('Calling dex-okx-market-token-price-info...');
   results.push(
     await callMcpTool('dex-okx-market-token-price-info', {
-      chainIndex: String(X_LAYER_CHAIN_ID),
-      tokenContractAddress: USDG_CONTRACT,
+      items: [
+        {
+          chainIndex: String(X_LAYER_CHAIN_ID),
+          tokenContractAddress: USDG_CONTRACT,
+        },
+      ],
     })
   );
 
@@ -105,7 +109,7 @@ async function run() {
   }
 
   const md = formatFindings(results);
-  const findingsPath = path.join('scripts', 'src', 'spikes', 'findings', 'mcp-spike.md');
+  const findingsPath = path.join('src', 'spikes', 'findings', 'mcp-spike.md');
   await writeFile(findingsPath, md, 'utf8');
   console.log(`\nFindings: ${findingsPath}`);
 
