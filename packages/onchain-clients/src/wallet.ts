@@ -1,4 +1,4 @@
-import { spawnCli } from './util/spawn-cli';
+import { spawnCli, type SpawnCliResult } from './util/spawn-cli';
 
 export interface WalletStatus {
   email: string;
@@ -48,9 +48,39 @@ export interface HistoryEntry {
 }
 
 /**
+ * The onchainos CLI wraps all wallet subcommand output in an envelope:
+ *   { "ok": boolean, "data": T, "error"?: string }
+ *
+ * Parse the envelope and return `data`, or throw if `ok: false`.
+ *
+ * Accepts either a pre-wrapped envelope or a bare payload so that unit tests
+ * which mock stdout with the unwrapped shape still work.
+ */
+function unwrapEnvelope<T>(result: SpawnCliResult, operation: string): T {
+  const parsed = result.parseJson<{ ok?: boolean; data?: T; error?: string } | T>();
+  if (
+    parsed !== null &&
+    typeof parsed === 'object' &&
+    'ok' in parsed &&
+    typeof (parsed as { ok?: unknown }).ok === 'boolean'
+  ) {
+    const env = parsed as { ok: boolean; data?: T; error?: string };
+    if (!env.ok) {
+      throw new Error(`${operation} failed: ${env.error ?? 'unknown error'}`);
+    }
+    if (env.data === undefined) {
+      throw new Error(`${operation} returned no data`);
+    }
+    return env.data;
+  }
+  return parsed as T;
+}
+
+/**
  * TypeScript wrapper around `onchainos wallet` CLI commands.
- * All methods invoke spawnCli with canonical arg arrays and parse stdout JSON.
- * Throws on non-zero exit codes.
+ * All methods invoke spawnCli with canonical arg arrays, unwrap the
+ * `{ok, data}` envelope, and return the typed inner payload.
+ * Throws on non-zero exit codes or envelope `ok: false`.
  */
 export class WalletClient {
   async status(): Promise<WalletStatus> {
@@ -58,7 +88,7 @@ export class WalletClient {
     if (result.exitCode !== 0) {
       throw new Error(`wallet status failed: ${result.stderr || 'unknown error'}`);
     }
-    return result.parseJson<WalletStatus>();
+    return unwrapEnvelope<WalletStatus>(result, 'wallet status');
   }
 
   async switchAccount(accountId: string): Promise<void> {
@@ -73,7 +103,7 @@ export class WalletClient {
     if (result.exitCode !== 0) {
       throw new Error(`wallet add failed: ${result.stderr}`);
     }
-    return result.parseJson();
+    return unwrapEnvelope<{ accountId: string; accountName: string }>(result, 'wallet add');
   }
 
   async balance(opts: BalanceOptions): Promise<unknown> {
@@ -85,7 +115,7 @@ export class WalletClient {
     if (result.exitCode !== 0) {
       throw new Error(`wallet balance failed: ${result.stderr}`);
     }
-    return result.parseJson();
+    return unwrapEnvelope<unknown>(result, 'wallet balance');
   }
 
   async sendToken(opts: SendTokenOptions): Promise<SendTokenResult> {
@@ -106,7 +136,7 @@ export class WalletClient {
     if (result.exitCode !== 0) {
       throw new Error(`wallet send failed: ${result.stderr}`);
     }
-    return result.parseJson<SendTokenResult>();
+    return unwrapEnvelope<SendTokenResult>(result, 'wallet send');
   }
 
   async getHistory(opts: HistoryOptions): Promise<HistoryEntry[]> {
@@ -119,7 +149,7 @@ export class WalletClient {
     if (result.exitCode !== 0) {
       throw new Error(`wallet history failed: ${result.stderr}`);
     }
-    const parsed = result.parseJson<Array<{ orderList: HistoryEntry[] }>>();
-    return parsed[0]?.orderList ?? [];
+    const data = unwrapEnvelope<Array<{ orderList: HistoryEntry[] }>>(result, 'wallet history');
+    return data[0]?.orderList ?? [];
   }
 }
