@@ -4734,7 +4734,7 @@ git tag chunk-3-complete
 
 **Steps:**
 
-- [ ] **Step 1.1: Create package.json**
+- [x] **Step 1.1: Create package.json**
 
 Create file `apps/producer/package.json`:
 ```json
@@ -4770,7 +4770,7 @@ Create file `apps/producer/package.json`:
 }
 ```
 
-- [ ] **Step 1.2: Create tsconfig.json**
+- [x] **Step 1.2: Create tsconfig.json**
 
 Create file `apps/producer/tsconfig.json`:
 ```json
@@ -4781,7 +4781,7 @@ Create file `apps/producer/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 1.3: Create config.ts**
+- [x] **Step 1.3: Create config.ts**
 
 Create file `apps/producer/src/config.ts`:
 ```typescript
@@ -4815,7 +4815,7 @@ export const config = {
 } as const;
 ```
 
-- [ ] **Step 1.4: Create server.ts (minimal bootstrap)**
+- [x] **Step 1.4: Create server.ts (minimal bootstrap)**
 
 Create file `apps/producer/src/server.ts`:
 ```typescript
@@ -4843,7 +4843,7 @@ async function bootstrap() {
 bootstrap();
 ```
 
-- [ ] **Step 1.5: Install + Typecheck + Commit**
+- [x] **Step 1.5: Install + Typecheck + Commit**
 
 Run:
 ```bash
@@ -4865,7 +4865,7 @@ Expected: zero errors.
 
 **Steps:**
 
-- [ ] **Step 2.1: Write failing tests first (TDD red step)**
+- [x] **Step 2.1: Write failing tests first (TDD red step)**
 
 Create file `apps/producer/tests/facilitator/client.test.ts`:
 ```typescript
@@ -5027,7 +5027,7 @@ describe('FacilitatorClient', () => {
 });
 ```
 
-- [ ] **Step 2.2: Run test to verify failure**
+- [x] **Step 2.2: Run test to verify failure**
 
 Run:
 ```bash
@@ -5036,7 +5036,7 @@ pnpm --filter producer test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 2.3: Create FacilitatorClient**
+- [x] **Step 2.3: Create FacilitatorClient**
 
 Create file `apps/producer/src/facilitator/client.ts`:
 ```typescript
@@ -5148,7 +5148,7 @@ export class FacilitatorClient {
 }
 ```
 
-- [ ] **Step 2.4: Run tests + Commit**
+- [x] **Step 2.4: Run tests + Commit**
 
 Run:
 ```bash
@@ -5171,7 +5171,7 @@ Expected: 4 tests pass, zero typecheck errors.
 
 **Steps:**
 
-- [ ] **Step 3.1: Write failing payload codec test first**
+- [x] **Step 3.1: Write failing payload codec test first**
 
 Create file `apps/producer/tests/plugins/payload-codec.test.ts`:
 ```typescript
@@ -5255,7 +5255,7 @@ describe('encode402Payload / decodePaymentPayload', () => {
 });
 ```
 
-- [ ] **Step 3.2: Run test to verify failure**
+- [x] **Step 3.2: Run test to verify failure**
 
 Run:
 ```bash
@@ -5264,7 +5264,7 @@ pnpm --filter producer test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 3.3: Create payload-codec.ts**
+- [x] **Step 3.3: Create payload-codec.ts**
 
 Create file `apps/producer/src/plugins/payload-codec.ts`:
 ```typescript
@@ -5295,7 +5295,7 @@ export function decodePaymentPayload(base64: string): PaymentPayload {
 }
 ```
 
-- [ ] **Step 3.4: Run tests + Commit**
+- [x] **Step 3.4: Run tests + Commit**
 
 Run:
 ```bash
@@ -5306,7 +5306,7 @@ git commit -m "feat(producer): add payload codec for x402 v2 challenge/payment h
 
 Expected: 4 codec tests pass.
 
-- [ ] **Step 3.5: Create x402-gate.ts (Fastify plugin)**
+- [x] **Step 3.5: Create x402-gate.ts (Fastify plugin)**
 
 Create file `apps/producer/src/plugins/x402-gate.ts`:
 ```typescript
@@ -5458,7 +5458,7 @@ const x402GatePlugin: FastifyPluginAsync<X402GateOptions> = async (fastify, opts
 export default fp(x402GatePlugin, { name: 'x402-gate' });
 ```
 
-- [ ] **Step 3.6: Typecheck + Commit**
+- [x] **Step 3.6: Typecheck + Commit**
 
 Run:
 ```bash
@@ -5481,7 +5481,7 @@ Expected: zero typecheck errors.
 
 **Steps:**
 
-- [ ] **Step 4.1: Create market-snapshot route**
+- [x] **Step 4.1: Create market-snapshot route**
 
 Create file `apps/producer/src/routes/market-snapshot.ts`:
 ```typescript
@@ -5547,7 +5547,7 @@ export const marketSnapshotRoute: FastifyPluginAsync<PluginOpts> = async (fastif
 };
 ```
 
-- [ ] **Step 4.2: Create swap-quote route**
+- [x] **Step 4.2: Create swap-quote route**
 
 Create file `apps/producer/src/routes/swap-quote.ts`:
 ```typescript
@@ -5621,7 +5621,7 @@ export const swapQuoteRoute: FastifyPluginAsync<PluginOpts> = async (fastify, op
 };
 ```
 
-- [ ] **Step 4.3: Create trench-scan route**
+- [x] **Step 4.3: Create trench-scan route**
 
 Create file `apps/producer/src/routes/trench-scan.ts`:
 ```typescript
@@ -5679,7 +5679,7 @@ function computeRiskLevel(
 }
 ```
 
-- [ ] **Step 4.4: Wire all routes into server.ts**
+- [x] **Step 4.4: Wire all routes into server.ts**
 
 Overwrite file `apps/producer/src/server.ts`:
 ```typescript
@@ -5782,7 +5782,7 @@ async function bootstrap() {
 bootstrap();
 ```
 
-- [ ] **Step 4.5: Typecheck + Commit**
+- [x] **Step 4.5: Typecheck + Commit**
 
 Run:
 ```bash
@@ -5797,7 +5797,7 @@ Expected: zero typecheck errors.
 
 ### Task 5: Chunk 4 Exit Criteria Check
 
-- [ ] **Step 5.1: Verify all workspaces typecheck + test**
+- [x] **Step 5.1: Verify all workspaces typecheck + test**
 
 Run:
 ```bash
@@ -5808,7 +5808,7 @@ pnpm -r test
 
 Expected: zero errors. Test totals: 9 okx-auth + 42 orchestrator + 6 mcp-client + 18 onchain-clients + 8 producer = 83+ tests passing.
 
-- [ ] **Step 5.2: Manual smoke test — start Producer**
+- [x] **Step 5.2: Manual smoke test — start Producer**
 
 Prerequisite: `.env` populated with real credentials.
 
@@ -5821,7 +5821,7 @@ pnpm dev:producer
 
 Expected output: `Producer listening on port 3001`. Server stays running.
 
-- [ ] **Step 5.3: Verify 402 response on unauthorized request**
+- [x] **Step 5.3: Verify 402 response on unauthorized request**
 
 In another terminal, run:
 ```bash
@@ -5832,7 +5832,7 @@ curl -i -X POST http://localhost:3001/v1/market-snapshot \
 
 Expected: HTTP 402 with `PAYMENT-REQUIRED` header containing base64 challenge. Body is `{}`.
 
-- [ ] **Step 5.4: Verify /health endpoint**
+- [x] **Step 5.4: Verify /health endpoint**
 
 Run:
 ```bash
@@ -5841,7 +5841,7 @@ curl http://localhost:3001/health
 
 Expected: `{"status":"ok","time":...}`.
 
-- [ ] **Step 5.5: Stop Producer + Tag**
+- [x] **Step 5.5: Stop Producer + Tag**
 
 Run `Ctrl+C` in the dev:producer terminal, then:
 ```bash
