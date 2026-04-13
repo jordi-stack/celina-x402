@@ -9,8 +9,12 @@
  * 4. Back-to-back `wallet status` calls in separate spawns share session (no re-auth)
  */
 import { execa } from 'execa';
-import { writeFile } from 'node:fs/promises';
+import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface Finding {
   timestamp: string;
@@ -114,13 +118,9 @@ async function run() {
     findings.recommendation = 'HALT - spike execution failed.';
   }
 
-  const findingsPath = path.join(
-    'scripts',
-    'src',
-    'spikes',
-    'findings',
-    'cli-spike.md'
-  );
+  const findingsDir = path.join(__dirname, 'findings');
+  await mkdir(findingsDir, { recursive: true });
+  const findingsPath = path.join(findingsDir, 'cli-spike.md');
   const md = formatFindings(findings);
   await writeFile(findingsPath, md, 'utf8');
   console.log(`\nFindings written to ${findingsPath}\n`);
