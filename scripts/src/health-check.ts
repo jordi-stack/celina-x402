@@ -7,7 +7,7 @@
  */
 import { config as loadEnv } from 'dotenv';
 import { fileURLToPath } from 'node:url';
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import { signOkxRequest } from '@x402/okx-auth';
