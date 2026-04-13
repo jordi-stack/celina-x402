@@ -6,6 +6,7 @@
   "scripts": {
     "build": "pnpm -r build",
     "test": "pnpm -r test",
+    "test:integration": "RUN_INTEGRATION=1 vitest run --config tests/integration/vitest.config.ts",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "dev:producer": "pnpm --filter producer dev",
