@@ -3434,7 +3434,7 @@ Expected: clean working tree, commits for Tasks 1-7 visible.
 
 **Steps:**
 
-- [ ] **Step 1.1: Create package.json**
+- [x] **Step 1.1: Create package.json**
 
 Create file `packages/mcp-client/package.json`:
 ```json
@@ -3459,7 +3459,7 @@ Create file `packages/mcp-client/package.json`:
 }
 ```
 
-- [ ] **Step 1.2: Create tsconfig.json**
+- [x] **Step 1.2: Create tsconfig.json**
 
 Create file `packages/mcp-client/tsconfig.json`:
 ```json
@@ -3470,14 +3470,14 @@ Create file `packages/mcp-client/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 1.3: Create index.ts stub**
+- [x] **Step 1.3: Create index.ts stub**
 
 Create file `packages/mcp-client/src/index.ts`:
 ```typescript
 export {};
 ```
 
-- [ ] **Step 1.4: Install + Commit**
+- [x] **Step 1.4: Install + Commit**
 
 Run:
 ```bash
@@ -3496,7 +3496,7 @@ git commit -m "chore(mcp-client): scaffold package"
 
 **Steps:**
 
-- [ ] **Step 2.1: Write failing tests first (TDD red step)**
+- [x] **Step 2.1: Write failing tests first (TDD red step)**
 
 Create file `packages/mcp-client/tests/client.test.ts`:
 ```typescript
@@ -3623,7 +3623,7 @@ describe('OKXMCPClient', () => {
 });
 ```
 
-- [ ] **Step 2.2: Run tests to verify failure (TDD red confirmation)**
+- [x] **Step 2.2: Run tests to verify failure (TDD red confirmation)**
 
 Run:
 ```bash
@@ -3632,7 +3632,7 @@ pnpm --filter @x402/mcp-client test
 
 Expected: FAIL with "Cannot find module '../src/client'".
 
-- [ ] **Step 2.3: Create client.ts**
+- [x] **Step 2.3: Create client.ts**
 
 Create file `packages/mcp-client/src/client.ts`:
 ```typescript
@@ -3728,7 +3728,7 @@ export class OKXMCPClient {
 }
 ```
 
-- [ ] **Step 2.4: Update index.ts with barrel exports**
+- [x] **Step 2.4: Update index.ts with barrel exports**
 
 Overwrite file `packages/mcp-client/src/index.ts`:
 ```typescript
@@ -3736,7 +3736,7 @@ export { OKXMCPClient, MCPError } from './client';
 export type { MCPClientConfig } from './client';
 ```
 
-- [ ] **Step 2.5: Run tests + Commit**
+- [x] **Step 2.5: Run tests + Commit**
 
 Run:
 ```bash
@@ -3761,7 +3761,7 @@ Expected: 6 tests pass, zero typecheck errors.
 
 **Steps:**
 
-- [ ] **Step 3.1: Create package.json**
+- [x] **Step 3.1: Create package.json**
 
 Create file `packages/onchain-clients/package.json`:
 ```json
@@ -3787,7 +3787,7 @@ Create file `packages/onchain-clients/package.json`:
 }
 ```
 
-- [ ] **Step 3.2: Create tsconfig.json**
+- [x] **Step 3.2: Create tsconfig.json**
 
 Create file `packages/onchain-clients/tsconfig.json`:
 ```json
@@ -3798,7 +3798,7 @@ Create file `packages/onchain-clients/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 3.3: Write failing spawn-cli test first (TDD red step)**
+- [x] **Step 3.3: Write failing spawn-cli test first (TDD red step)**
 
 Create file `packages/onchain-clients/tests/util/spawn-cli.test.ts`:
 ```typescript
@@ -3841,7 +3841,7 @@ describe('spawnCli', () => {
 });
 ```
 
-- [ ] **Step 3.4: Run test to verify failure (TDD red confirmation)**
+- [x] **Step 3.4: Run test to verify failure (TDD red confirmation)**
 
 Run:
 ```bash
@@ -3851,7 +3851,7 @@ pnpm --filter @x402/onchain-clients test
 
 Expected: FAIL with "Cannot find module '../../src/util/spawn-cli'".
 
-- [ ] **Step 3.5: Create spawn-cli.ts**
+- [x] **Step 3.5: Create spawn-cli.ts**
 
 Create file `packages/onchain-clients/src/util/spawn-cli.ts`:
 ```typescript
@@ -3904,7 +3904,7 @@ export async function spawnCli(
 }
 ```
 
-- [ ] **Step 3.6: Create index.ts stub**
+- [x] **Step 3.6: Create index.ts stub**
 
 Create file `packages/onchain-clients/src/index.ts`:
 ```typescript
@@ -3912,7 +3912,7 @@ export { spawnCli } from './util/spawn-cli';
 export type { SpawnCliResult, SpawnCliOptions } from './util/spawn-cli';
 ```
 
-- [ ] **Step 3.7: Run tests + Commit**
+- [x] **Step 3.7: Run tests + Commit**
 
 Run:
 ```bash
@@ -3934,7 +3934,7 @@ Expected: 5 tests pass, zero typecheck errors.
 
 **Steps:**
 
-- [ ] **Step 4.1: Write failing test first (TDD red step)**
+- [x] **Step 4.1: Write failing test first (TDD red step)**
 
 Create file `packages/onchain-clients/tests/wallet.test.ts`:
 ```typescript
@@ -4044,7 +4044,7 @@ describe('WalletClient', () => {
 });
 ```
 
-- [ ] **Step 4.2: Run test to verify failure (TDD red confirmation)**
+- [x] **Step 4.2: Run test to verify failure (TDD red confirmation)**
 
 Run:
 ```bash
@@ -4053,7 +4053,7 @@ pnpm --filter @x402/onchain-clients test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 4.3: Create wallet.ts**
+- [x] **Step 4.3: Create wallet.ts**
 
 Create file `packages/onchain-clients/src/wallet.ts`:
 ```typescript
@@ -4184,7 +4184,7 @@ export class WalletClient {
 }
 ```
 
-- [ ] **Step 4.4: Run tests + Commit**
+- [x] **Step 4.4: Run tests + Commit**
 
 Run:
 ```bash
@@ -4205,7 +4205,7 @@ Expected: 11 tests pass (5 spawn-cli + 6 wallet).
 
 **Steps:**
 
-- [ ] **Step 5.1: Write failing test first (TDD red step)**
+- [x] **Step 5.1: Write failing test first (TDD red step)**
 
 Create file `packages/onchain-clients/tests/x402-payment.test.ts`:
 ```typescript
@@ -4284,7 +4284,7 @@ describe('X402PaymentClient', () => {
 });
 ```
 
-- [ ] **Step 5.2: Run test to verify failure (TDD red confirmation)**
+- [x] **Step 5.2: Run test to verify failure (TDD red confirmation)**
 
 Run:
 ```bash
@@ -4293,7 +4293,7 @@ pnpm --filter @x402/onchain-clients test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 5.3: Create x402-payment.ts**
+- [x] **Step 5.3: Create x402-payment.ts**
 
 Create file `packages/onchain-clients/src/x402-payment.ts`:
 ```typescript
@@ -4361,7 +4361,7 @@ export class X402PaymentClient {
 }
 ```
 
-- [ ] **Step 5.4: Run tests + Commit**
+- [x] **Step 5.4: Run tests + Commit**
 
 Run:
 ```bash
@@ -4384,7 +4384,7 @@ Expected: 14 tests pass (11 existing + 3 x402-payment).
 
 **Steps:**
 
-- [ ] **Step 6.1: Write failing trenches test first (TDD red step)**
+- [x] **Step 6.1: Write failing trenches test first (TDD red step)**
 
 Create file `packages/onchain-clients/tests/trenches.test.ts`:
 ```typescript
@@ -4431,7 +4431,7 @@ describe('TrenchesClient', () => {
 });
 ```
 
-- [ ] **Step 6.2: Run test to verify failure**
+- [x] **Step 6.2: Run test to verify failure**
 
 Run:
 ```bash
@@ -4440,7 +4440,7 @@ pnpm --filter @x402/onchain-clients test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 6.3: Create trenches.ts**
+- [x] **Step 6.3: Create trenches.ts**
 
 Create file `packages/onchain-clients/src/trenches.ts`:
 ```typescript
@@ -4495,7 +4495,7 @@ export class TrenchesClient {
 }
 ```
 
-- [ ] **Step 6.4: Write recovery adapter test first (TDD red step)**
+- [x] **Step 6.4: Write recovery adapter test first (TDD red step)**
 
 Create file `packages/onchain-clients/tests/recovery-adapter.test.ts`:
 ```typescript
@@ -4562,7 +4562,7 @@ describe('createWalletHistoryFetcher', () => {
 });
 ```
 
-- [ ] **Step 6.5: Create recovery-adapter.ts**
+- [x] **Step 6.5: Create recovery-adapter.ts**
 
 Create file `packages/onchain-clients/src/recovery-adapter.ts`:
 ```typescript
@@ -4613,7 +4613,7 @@ export function createWalletHistoryFetcher(
 }
 ```
 
-- [ ] **Step 6.6: Run tests + Commit**
+- [x] **Step 6.6: Run tests + Commit**
 
 Run:
 ```bash
@@ -4633,7 +4633,7 @@ Expected: 18 tests pass (14 existing + 2 trenches + 2 adapter).
 
 **Steps:**
 
-- [ ] **Step 7.1: Update index.ts with full barrel exports**
+- [x] **Step 7.1: Update index.ts with full barrel exports**
 
 Overwrite file `packages/onchain-clients/src/index.ts`:
 ```typescript
@@ -4664,7 +4664,7 @@ export { createWalletHistoryFetcher } from './recovery-adapter';
 export type { WalletHistoryEntry, RecoveryAdapterOptions } from './recovery-adapter';
 ```
 
-- [ ] **Step 7.2: Typecheck + Commit**
+- [x] **Step 7.2: Typecheck + Commit**
 
 Run:
 ```bash
@@ -4679,7 +4679,7 @@ Expected: zero typecheck errors.
 
 ### Task 8: Chunk 3 Exit Criteria Check
 
-- [ ] **Step 8.1: Verify all workspaces typecheck + test**
+- [x] **Step 8.1: Verify all workspaces typecheck + test**
 
 Run:
 ```bash
@@ -4690,7 +4690,7 @@ pnpm -r test
 
 Expected: zero errors. Test totals: 9 okx-auth + 42 orchestrator + 6 mcp-client + 18 onchain-clients = 75+ tests passing.
 
-- [ ] **Step 8.2: Tag completion**
+- [x] **Step 8.2: Tag completion**
 
 Run:
 ```bash
