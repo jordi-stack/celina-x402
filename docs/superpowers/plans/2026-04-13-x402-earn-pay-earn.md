@@ -5883,7 +5883,7 @@ git tag chunk-4-complete
 
 **Steps:**
 
-- [ ] **Step 1.1: Create package.json**
+- [x] **Step 1.1: Create package.json**
 
 Create file `apps/consumer/package.json`:
 ```json
@@ -5917,7 +5917,7 @@ Create file `apps/consumer/package.json`:
 
 Note: `openai` package is used because Groq exposes an OpenAI-compatible API with `baseURL` override.
 
-- [ ] **Step 1.2: Create tsconfig.json**
+- [x] **Step 1.2: Create tsconfig.json**
 
 Create file `apps/consumer/tsconfig.json`:
 ```json
@@ -5928,7 +5928,7 @@ Create file `apps/consumer/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 1.3: Create config.ts**
+- [x] **Step 1.3: Create config.ts**
 
 Create file `apps/consumer/src/config.ts`:
 ```typescript
@@ -5963,7 +5963,7 @@ export const config = {
 } as const;
 ```
 
-- [ ] **Step 1.4: Install + Typecheck + Commit**
+- [x] **Step 1.4: Install + Typecheck + Commit**
 
 Run:
 ```bash
@@ -5986,7 +5986,7 @@ Expected: zero errors.
 
 **Steps:**
 
-- [ ] **Step 2.1: Create prompts.ts**
+- [x] **Step 2.1: Create prompts.ts**
 
 Create file `apps/consumer/src/reasoner/prompts.ts`:
 ```typescript
@@ -6043,7 +6043,7 @@ export function buildUserPrompt(state: AgentState): string {
 
 Note: Decision validation is handled authoritatively by `DecisionSchema.parse` in `reasoner/client.ts`. No hand-rolled validator here.
 
-- [ ] **Step 2.2: Write failing test first (TDD red step)**
+- [x] **Step 2.2: Write failing test first (TDD red step)**
 
 Create file `apps/consumer/tests/reasoner/client.test.ts`:
 ```typescript
@@ -6159,7 +6159,7 @@ describe('ReasonerClient', () => {
 });
 ```
 
-- [ ] **Step 2.3: Run test to verify failure**
+- [x] **Step 2.3: Run test to verify failure**
 
 Run:
 ```bash
@@ -6168,7 +6168,7 @@ pnpm --filter consumer test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 2.4: Create client.ts**
+- [x] **Step 2.4: Create client.ts**
 
 Create file `apps/consumer/src/reasoner/client.ts`:
 ```typescript
@@ -6258,7 +6258,7 @@ export class ReasonerClient {
 }
 ```
 
-- [ ] **Step 2.5: Run tests + Commit**
+- [x] **Step 2.5: Run tests + Commit**
 
 Run:
 ```bash
@@ -6280,7 +6280,7 @@ Expected: 3 tests pass, zero typecheck errors.
 
 **Steps:**
 
-- [ ] **Step 3.1: Write failing test first**
+- [x] **Step 3.1: Write failing test first**
 
 Create file `apps/consumer/tests/reasoner/throttler.test.ts`:
 ```typescript
@@ -6345,7 +6345,7 @@ describe('ModelThrottler', () => {
 });
 ```
 
-- [ ] **Step 3.2: Run test to verify failure**
+- [x] **Step 3.2: Run test to verify failure**
 
 Run:
 ```bash
@@ -6354,7 +6354,7 @@ pnpm --filter consumer test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 3.3: Create throttler.ts**
+- [x] **Step 3.3: Create throttler.ts**
 
 Create file `apps/consumer/src/reasoner/throttler.ts`:
 ```typescript
@@ -6399,7 +6399,7 @@ export class ModelThrottler {
 }
 ```
 
-- [ ] **Step 3.4: Run tests + Commit**
+- [x] **Step 3.4: Run tests + Commit**
 
 Run:
 ```bash
@@ -6420,7 +6420,7 @@ Expected: 4 throttler tests pass.
 
 **Steps:**
 
-- [ ] **Step 4.1: Write failing test first**
+- [x] **Step 4.1: Write failing test first**
 
 Create file `apps/consumer/tests/http/replay.test.ts`:
 ```typescript
@@ -6507,7 +6507,7 @@ describe('replayWithPayment', () => {
 });
 ```
 
-- [ ] **Step 4.2: Run test to verify failure**
+- [x] **Step 4.2: Run test to verify failure**
 
 Run:
 ```bash
@@ -6516,7 +6516,7 @@ pnpm --filter consumer test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 4.3: Create replay.ts**
+- [x] **Step 4.3: Create replay.ts**
 
 Create file `apps/consumer/src/http/replay.ts`:
 ```typescript
@@ -6591,7 +6591,7 @@ export async function replayWithPayment<TBody, TData = unknown>(
 }
 ```
 
-- [ ] **Step 4.4: Run tests + Commit**
+- [x] **Step 4.4: Run tests + Commit**
 
 Run:
 ```bash
@@ -6614,7 +6614,7 @@ Expected: 2 replay tests pass.
 
 **Steps:**
 
-- [ ] **Step 5.1: Write failing budget test first**
+- [x] **Step 5.1: Write failing budget test first**
 
 Create file `apps/consumer/tests/agent/budget.test.ts`:
 ```typescript
@@ -6653,7 +6653,7 @@ describe('BudgetTracker', () => {
 });
 ```
 
-- [ ] **Step 5.2: Run test to verify failure + Create budget.ts**
+- [x] **Step 5.2: Run test to verify failure + Create budget.ts**
 
 Run:
 ```bash
@@ -6713,7 +6713,7 @@ export class BudgetTracker {
 }
 ```
 
-- [ ] **Step 5.3: Run budget tests + Commit**
+- [x] **Step 5.3: Run budget tests + Commit**
 
 Run:
 ```bash
@@ -6724,7 +6724,7 @@ git commit -m "feat(consumer): add BudgetTracker with min-balance policy"
 
 Expected: 4 budget tests pass.
 
-- [ ] **Step 5.4: Create loop.ts orchestrator**
+- [x] **Step 5.4: Create loop.ts orchestrator**
 
 Create file `apps/consumer/src/agent/loop.ts`:
 ```typescript
@@ -7014,7 +7014,7 @@ function sleep(ms: number): Promise<void> {
 }
 ```
 
-- [ ] **Step 5.5: Create index.ts entry point**
+- [x] **Step 5.5: Create index.ts entry point**
 
 Create file `apps/consumer/src/index.ts`:
 ```typescript
@@ -7094,7 +7094,7 @@ main().catch((err) => {
 });
 ```
 
-- [ ] **Step 5.6: Typecheck + Commit**
+- [x] **Step 5.6: Typecheck + Commit**
 
 Run:
 ```bash
@@ -7109,7 +7109,7 @@ Expected: zero typecheck errors.
 
 ### Task 6: Chunk 5 Exit Criteria Check
 
-- [ ] **Step 6.1: Verify all workspaces typecheck + test**
+- [x] **Step 6.1: Verify all workspaces typecheck + test**
 
 Run:
 ```bash
@@ -7119,7 +7119,7 @@ pnpm -r test
 
 Expected: 92+ tests pass (83 previous + 9 consumer).
 
-- [ ] **Step 6.2: Tag completion**
+- [x] **Step 6.2: Tag completion**
 
 ```bash
 git status
