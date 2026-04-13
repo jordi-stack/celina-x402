@@ -193,7 +193,7 @@ ${f.blockers.length === 0 ? '_None_' : f.blockers.map((b) => `- ${b}`).join('\n'
 ## Recommendation
 ${f.recommendation}
 `;
-  const findingsPath = path.join('scripts', 'src', 'spikes', 'findings', 'facilitator-spike.md');
+  const findingsPath = path.join('src', 'spikes', 'findings', 'facilitator-spike.md');
   await writeFile(findingsPath, md, 'utf8');
   console.log(`\nFindings: ${findingsPath}\n${f.recommendation}`);
   if (f.blockers.length > 0) process.exitCode = 1;
