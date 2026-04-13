@@ -1882,7 +1882,7 @@ Expected: tag created, commit history readable with meaningful messages.
 
 **Steps:**
 
-- [ ] **Step 1.1: Create package.json**
+- [x] **Step 1.1: Create package.json**
 
 Create file `packages/orchestrator/package.json`:
 ```json
@@ -1910,7 +1910,7 @@ Create file `packages/orchestrator/package.json`:
 }
 ```
 
-- [ ] **Step 1.2: Create tsconfig.json**
+- [x] **Step 1.2: Create tsconfig.json**
 
 Create file `packages/orchestrator/tsconfig.json`:
 ```json
@@ -1925,7 +1925,7 @@ Create file `packages/orchestrator/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 1.3: Create index.ts stub**
+- [x] **Step 1.3: Create index.ts stub**
 
 Create file `packages/orchestrator/src/index.ts`:
 ```typescript
@@ -1933,7 +1933,7 @@ Create file `packages/orchestrator/src/index.ts`:
 export {};
 ```
 
-- [ ] **Step 1.4: Install dependencies**
+- [x] **Step 1.4: Install dependencies**
 
 Run:
 ```bash
@@ -1943,7 +1943,7 @@ pnpm install
 
 Expected: `better-sqlite3` native module compiles. If compile fails, install Python + build-essential.
 
-- [ ] **Step 1.5: Typecheck + Commit**
+- [x] **Step 1.5: Typecheck + Commit**
 
 Run:
 ```bash
@@ -1965,7 +1965,7 @@ Expected: zero typecheck errors, commit succeeds.
 
 **Steps:**
 
-- [ ] **Step 2.1: Write failing test first**
+- [x] **Step 2.1: Write failing test first**
 
 Create file `packages/orchestrator/tests/db/migrate.test.ts`:
 ```typescript
@@ -2032,7 +2032,7 @@ describe('migrate', () => {
 });
 ```
 
-- [ ] **Step 2.2: Run test to verify failure**
+- [x] **Step 2.2: Run test to verify failure**
 
 Run:
 ```bash
@@ -2041,7 +2041,7 @@ pnpm --filter @x402/orchestrator test
 
 Expected: FAIL with "Cannot find module '../../src/db/migrate'".
 
-- [ ] **Step 2.3: Create schema.ts with statement array**
+- [x] **Step 2.3: Create schema.ts with statement array**
 
 Create file `packages/orchestrator/src/db/schema.ts`:
 ```typescript
@@ -2113,7 +2113,7 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
 ];
 ```
 
-- [ ] **Step 2.4: Create migrate.ts using prepared statements**
+- [x] **Step 2.4: Create migrate.ts using prepared statements**
 
 Create file `packages/orchestrator/src/db/migrate.ts`:
 ```typescript
@@ -2135,7 +2135,7 @@ export function migrate(db: Database.Database): void {
 }
 ```
 
-- [ ] **Step 2.5: Run tests to verify pass**
+- [x] **Step 2.5: Run tests to verify pass**
 
 Run:
 ```bash
@@ -2144,7 +2144,7 @@ pnpm --filter @x402/orchestrator test
 
 Expected: 5 tests pass, 0 failing.
 
-- [ ] **Step 2.6: Typecheck + Commit**
+- [x] **Step 2.6: Typecheck + Commit**
 
 Run:
 ```bash
@@ -2163,7 +2163,7 @@ git commit -m "feat(orchestrator): add SQLite schema + idempotent migration with
 
 **Steps:**
 
-- [ ] **Step 3.1: Write failing tests first**
+- [x] **Step 3.1: Write failing tests first**
 
 Create file `packages/orchestrator/tests/db/store.test.ts`:
 ```typescript
@@ -2328,7 +2328,7 @@ describe('Store', () => {
 });
 ```
 
-- [ ] **Step 3.2: Run test to verify failure**
+- [x] **Step 3.2: Run test to verify failure**
 
 Run:
 ```bash
@@ -2337,7 +2337,7 @@ pnpm --filter @x402/orchestrator test
 
 Expected: FAIL with missing module.
 
-- [ ] **Step 3.3: Create store.ts**
+- [x] **Step 3.3: Create store.ts**
 
 Create file `packages/orchestrator/src/db/store.ts`:
 ```typescript
@@ -2576,7 +2576,7 @@ export class Store {
 }
 ```
 
-- [ ] **Step 3.4: Run tests + Commit**
+- [x] **Step 3.4: Run tests + Commit**
 
 Run:
 ```bash
@@ -2598,7 +2598,7 @@ Expected: 12 tests pass (5 migrate + 7 store), zero typecheck errors.
 
 **Steps:**
 
-- [ ] **Step 4.1: Write failing tests first (TDD red step)**
+- [x] **Step 4.1: Write failing tests first (TDD red step)**
 
 Create file `packages/orchestrator/tests/events/bus.test.ts`:
 ```typescript
@@ -2669,7 +2669,7 @@ describe('EventBus', () => {
 });
 ```
 
-- [ ] **Step 4.1b: Run tests to verify failure (TDD red confirmation)**
+- [x] **Step 4.1b: Run tests to verify failure (TDD red confirmation)**
 
 Run:
 ```bash
@@ -2678,7 +2678,7 @@ pnpm --filter @x402/orchestrator test
 
 Expected: FAIL with "Cannot find module '../../src/events/bus'".
 
-- [ ] **Step 4.2: Create bus.ts**
+- [x] **Step 4.2: Create bus.ts**
 
 Create file `packages/orchestrator/src/events/bus.ts`:
 ```typescript
@@ -2755,7 +2755,7 @@ export class EventBus {
 }
 ```
 
-- [ ] **Step 4.3: Run tests + Commit**
+- [x] **Step 4.3: Run tests + Commit**
 
 Run:
 ```bash
@@ -2776,7 +2776,7 @@ Expected: 17 tests pass (5 migrate + 7 store + 5 bus).
 
 **Steps:**
 
-- [ ] **Step 5.1: Write failing tests first (TDD red step)**
+- [x] **Step 5.1: Write failing tests first (TDD red step)**
 
 Create file `packages/orchestrator/tests/state/machine.test.ts`:
 ```typescript
@@ -2886,7 +2886,7 @@ describe('transition', () => {
 });
 ```
 
-- [ ] **Step 5.1b: Run tests to verify failure (TDD red confirmation)**
+- [x] **Step 5.1b: Run tests to verify failure (TDD red confirmation)**
 
 Run:
 ```bash
@@ -2895,7 +2895,7 @@ pnpm --filter @x402/orchestrator test
 
 Expected: FAIL with "Cannot find module '../../src/state/machine'".
 
-- [ ] **Step 5.2: Create machine.ts**
+- [x] **Step 5.2: Create machine.ts**
 
 Create file `packages/orchestrator/src/state/machine.ts`:
 ```typescript
@@ -3001,7 +3001,7 @@ export function transition(
 }
 ```
 
-- [ ] **Step 5.3: Run tests + Commit**
+- [x] **Step 5.3: Run tests + Commit**
 
 Run:
 ```bash
@@ -3022,7 +3022,7 @@ Expected: 37 tests pass (17 existing + 20 state machine).
 
 **Steps:**
 
-- [ ] **Step 6.1: Write failing tests first (TDD red step)**
+- [x] **Step 6.1: Write failing tests first (TDD red step)**
 
 Create file `packages/orchestrator/tests/recovery/reconcile.test.ts`:
 ```typescript
@@ -3133,7 +3133,7 @@ describe('reconcileOnBoot', () => {
 });
 ```
 
-- [ ] **Step 6.1b: Run tests to verify failure (TDD red confirmation)**
+- [x] **Step 6.1b: Run tests to verify failure (TDD red confirmation)**
 
 Run:
 ```bash
@@ -3142,7 +3142,7 @@ pnpm --filter @x402/orchestrator test
 
 Expected: FAIL with "Cannot find module '../../src/recovery/reconcile'".
 
-- [ ] **Step 6.2: Create reconcile.ts**
+- [x] **Step 6.2: Create reconcile.ts**
 
 Create file `packages/orchestrator/src/recovery/reconcile.ts`:
 ```typescript
@@ -3231,7 +3231,7 @@ export async function reconcileOnBoot(opts: ReconcileOpts): Promise<ReconcileRes
 }
 ```
 
-- [ ] **Step 6.3: Run tests + Commit**
+- [x] **Step 6.3: Run tests + Commit**
 
 Run:
 ```bash
@@ -3252,7 +3252,7 @@ Expected: 41 tests pass (37 existing + 4 reconcile).
 
 **Steps:**
 
-- [ ] **Step 7.1: Update index.ts with full barrel exports**
+- [x] **Step 7.1: Update index.ts with full barrel exports**
 
 Overwrite file `packages/orchestrator/src/index.ts`:
 ```typescript
@@ -3273,7 +3273,7 @@ export type {
 } from './recovery/reconcile';
 ```
 
-- [ ] **Step 7.2: Create smoke test**
+- [x] **Step 7.2: Create smoke test**
 
 Create file `packages/orchestrator/tests/smoke.test.ts`:
 ```typescript
@@ -3353,7 +3353,7 @@ describe('Orchestrator smoke integration', () => {
 });
 ```
 
-- [ ] **Step 7.3: Run all tests + Commit**
+- [x] **Step 7.3: Run all tests + Commit**
 
 Run:
 ```bash
@@ -3369,7 +3369,7 @@ Expected: 42 tests pass including smoke test.
 
 ### Task 8: Chunk 2 Exit Criteria Check
 
-- [ ] **Step 8.1: Verify all workspaces typecheck**
+- [x] **Step 8.1: Verify all workspaces typecheck**
 
 Run:
 ```bash
@@ -3379,7 +3379,7 @@ pnpm -r typecheck
 
 Expected: zero errors across `shared`, `okx-auth`, `scripts`, `orchestrator`.
 
-- [ ] **Step 8.2: Run all tests**
+- [x] **Step 8.2: Run all tests**
 
 Run:
 ```bash
@@ -3388,7 +3388,7 @@ pnpm -r test
 
 Expected: all tests pass. Total: 9 okx-auth + 42 orchestrator = 51+ tests.
 
-- [ ] **Step 8.3: Verify clean git state and tag**
+- [x] **Step 8.3: Verify clean git state and tag**
 
 Run:
 ```bash
