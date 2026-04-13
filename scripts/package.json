@@ -1,0 +1,25 @@
+{
+  "name": "@x402/scripts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "spike:cli": "tsx src/spikes/cli-spike.ts",
+    "spike:facilitator": "tsx src/spikes/facilitator-spike.ts",
+    "spike:mcp": "tsx src/spikes/mcp-spike.ts",
+    "spike:all": "pnpm spike:cli && pnpm spike:facilitator && pnpm spike:mcp",
+    "health-check": "tsx src/health-check.ts",
+    "demo": "tsx src/demo-runner.ts"
+  },
+  "dependencies": {
+    "@x402/shared": "workspace:*",
+    "@x402/okx-auth": "workspace:*",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^20.16.0"
+  }
+}
