@@ -53,8 +53,12 @@ export const SupportedResponseSchema = z
   .passthrough();
 export type SupportedResponse = z.infer<typeof SupportedResponseSchema>;
 
+// Day 1 facilitator spike observed live shape: `code` arrives as a JSON number,
+// not a string as the earlier doc examples suggested. Coerce to string so
+// downstream comparisons like `envelope.code === '0'` remain stable regardless
+// of which form a given OKX endpoint emits.
 export const OkxApiEnvelopeSchema = z.object({
-  code: z.string(),
+  code: z.coerce.string(),
   msg: z.string(),
   data: z.unknown(),
 });
