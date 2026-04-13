@@ -234,9 +234,18 @@ importers:
       '@x402/okx-auth':
         specifier: workspace:*
         version: link:../packages/okx-auth
+      '@x402/onchain-clients':
+        specifier: workspace:*
+        version: link:../packages/onchain-clients
+      '@x402/orchestrator':
+        specifier: workspace:*
+        version: link:../packages/orchestrator
       '@x402/shared':
         specifier: workspace:*
         version: link:../packages/shared
+      better-sqlite3:
+        specifier: ^11.3.0
+        version: 11.10.0
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
@@ -244,6 +253,9 @@ importers:
         specifier: ^9.6.1
         version: 9.6.1
     devDependencies:
+      '@types/better-sqlite3':
+        specifier: ^7.6.11
+        version: 7.6.13
       '@types/node':
         specifier: ^20.16.0
         version: 20.19.39
