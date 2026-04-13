@@ -7915,7 +7915,7 @@ git tag chunk-6-complete
 
 **Steps:**
 
-- [ ] **Step 1.1: Create health-check.ts**
+- [x] **Step 1.1: Create health-check.ts**
 
 Create file `scripts/src/health-check.ts`:
 ```typescript
@@ -8190,7 +8190,7 @@ main().catch((err) => {
 });
 ```
 
-- [ ] **Step 1.2: Typecheck + Commit**
+- [x] **Step 1.2: Typecheck + Commit**
 
 Run:
 ```bash
@@ -8201,7 +8201,7 @@ git commit -m "feat(scripts): add pre-flight health check with 11 validation ste
 
 Expected: zero errors.
 
-- [ ] **Step 1.3: Run health check (live)**
+- [x] **Step 1.3: Run health check (live)**
 
 Run:
 ```bash
@@ -8219,7 +8219,7 @@ Expected: all 11 checks pass. If any fail, fix blockers before proceeding.
 
 **Steps:**
 
-- [ ] **Step 2.1: Create demo-runner.ts**
+- [x] **Step 2.1: Create demo-runner.ts**
 
 Create file `scripts/src/demo-runner.ts`:
 ```typescript
@@ -8275,7 +8275,7 @@ main().catch((err) => {
 });
 ```
 
-- [ ] **Step 2.2: Typecheck + Commit**
+- [x] **Step 2.2: Typecheck + Commit**
 
 Run:
 ```bash
@@ -8295,7 +8295,7 @@ git commit -m "feat(scripts): add demo-runner script with health check + termina
 
 **Steps:**
 
-- [ ] **Step 3.1: Create integration test vitest config**
+- [x] **Step 3.1: Create integration test vitest config**
 
 Create file `tests/integration/vitest.config.ts`:
 ```typescript
@@ -8312,7 +8312,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3.2: Create wallet-setup integration test**
+- [x] **Step 3.2: Create wallet-setup integration test**
 
 Create file `tests/integration/wallet-setup.test.ts`:
 ```typescript
@@ -8354,7 +8354,7 @@ describe.skipIf(SKIP)('wallet-setup integration', () => {
 });
 ```
 
-- [ ] **Step 3.3: Create facilitator-flow integration test**
+- [x] **Step 3.3: Create facilitator-flow integration test**
 
 Create file `tests/integration/facilitator-flow.test.ts`:
 ```typescript
@@ -8390,14 +8390,14 @@ describe.skipIf(SKIP)('facilitator integration', () => {
 });
 ```
 
-- [ ] **Step 3.4: Add integration test script to root package.json**
+- [x] **Step 3.4: Add integration test script to root package.json**
 
 Edit `package.json` — add under scripts:
 ```json
 "test:integration": "RUN_INTEGRATION=1 vitest run --config tests/integration/vitest.config.ts"
 ```
 
-- [ ] **Step 3.5: Run integration tests (optional, consumes small amount of gas/USDG for queries)**
+- [x] **Step 3.5: Run integration tests (optional, consumes small amount of gas/USDG for queries)**
 
 Run:
 ```bash
@@ -8406,7 +8406,7 @@ pnpm test:integration
 
 Expected: all tests pass. If not, debug against live X Layer mainnet before proceeding.
 
-- [ ] **Step 3.6: Commit**
+- [x] **Step 3.6: Commit**
 
 Run:
 ```bash
@@ -8423,7 +8423,7 @@ git commit -m "test(integration): add opt-in integration tests for wallet + faci
 
 **Steps:**
 
-- [ ] **Step 4.1: Write full README**
+- [x] **Step 4.1: Write full README**
 
 Overwrite file `README.md`:
 ```markdown
@@ -8585,7 +8585,7 @@ Per hackathon requirement, this project uses OnchainOS modules substantively:
 MIT
 ```
 
-- [ ] **Step 4.2: Commit**
+- [x] **Step 4.2: Commit**
 
 Run:
 ```bash
@@ -8597,7 +8597,7 @@ git commit -m "docs: write full README with Aria narrative + setup instructions"
 
 ### Task 5: Final Integration Smoke Test
 
-- [ ] **Step 5.1: Run all unit tests**
+- [x] **Step 5.1: Run all unit tests**
 
 ```bash
 pnpm -r test
@@ -8605,7 +8605,7 @@ pnpm -r test
 
 Expected: all tests pass (92+ unit).
 
-- [ ] **Step 5.2: Run typecheck**
+- [x] **Step 5.2: Run typecheck**
 
 ```bash
 pnpm -r typecheck
@@ -8613,7 +8613,7 @@ pnpm -r typecheck
 
 Expected: zero errors.
 
-- [ ] **Step 5.3: Run health check**
+- [x] **Step 5.3: Run health check**
 
 ```bash
 pnpm health-check
@@ -8621,7 +8621,7 @@ pnpm health-check
 
 Expected: all 11 checks pass.
 
-- [ ] **Step 5.4: Run optional integration tests**
+- [x] **Step 5.4: Run optional integration tests**
 
 ```bash
 pnpm test:integration
@@ -8629,7 +8629,7 @@ pnpm test:integration
 
 Expected: all pass against live X Layer mainnet.
 
-- [ ] **Step 5.5: Manually start full demo**
+- [x] **Step 5.5: Manually start full demo**
 
 Terminal 1: `pnpm dev:producer`
 Terminal 2: `pnpm dev:consumer`
@@ -8644,7 +8644,7 @@ Watch at least 10 cycles complete. Verify:
 - Tx log page shows payments with clickable X Layer explorer links
 - Stop all 3 processes when satisfied
 
-- [ ] **Step 5.6: Tag completion**
+- [x] **Step 5.6: Tag completion**
 
 ```bash
 git status
@@ -8657,7 +8657,7 @@ git tag v0.1.0-demo-ready
 
 ### Task 6: Demo Video + Submission
 
-- [ ] **Step 6.1: Record demo video (1-3 min)**
+- [x] **Step 6.1: Record demo video (1-3 min)**
 
 Script outline:
 1. (0:00-0:15) Intro: "Meet Aria, an autonomous DeFi agent on X Layer"
@@ -8669,18 +8669,18 @@ Script outline:
 
 Save to Google Drive or YouTube. Capture public link.
 
-- [ ] **Step 6.2: Publish GitHub repo**
+- [x] **Step 6.2: Publish GitHub repo**
 
 Push to public GitHub. Capture repo URL.
 
-- [ ] **Step 6.3: Write X post**
+- [x] **Step 6.3: Write X post**
 
 Draft X post:
 > Meet Aria — an autonomous AI agent on @XLayerOfficial earning and spending USDG via #x402. First true agentic economy loop on X Layer. Zero gas. Watch her go: [demo video link] Built for #BuildX hackathon. [GitHub link]
 
 Post publicly. Capture post URL.
 
-- [ ] **Step 6.4: Submit Google Form**
+- [x] **Step 6.4: Submit Google Form**
 
 Fill submission form at https://docs.google.com/forms/d/e/1FAIpQLSfEjzs4ny2yH04tfDXs14Byye1KYhXv6NeytpqSKhrqTtgKqg/viewform with:
 - Email
@@ -8695,7 +8695,7 @@ Fill submission form at https://docs.google.com/forms/d/e/1FAIpQLSfEjzs4ny2yH04t
 - Demo video URL
 - X post URL
 
-- [ ] **Step 6.5: Final tag**
+- [x] **Step 6.5: Final tag**
 
 ```bash
 git tag v0.1.0-submitted
