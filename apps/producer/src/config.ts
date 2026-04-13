@@ -12,7 +12,8 @@ import {
 // of which directory pnpm filters into when running `dev:producer`.
 // apps/producer/src/config.ts -> ../../../.env (repo root)
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-loadEnv({ path: path.resolve(currentDir, '../../../.env') });
+const repoRoot = path.resolve(currentDir, '../../..');
+loadEnv({ path: path.resolve(repoRoot, '.env') });
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -30,5 +31,5 @@ export const config = {
   mcpEndpoint: process.env.OKX_MCP_SERVER_URL ?? OKX_MCP_ENDPOINT,
   facilitatorBase: process.env.OKX_FACILITATOR_BASE_URL ?? OKX_FACILITATOR_BASE,
   usdgContract: USDG_CONTRACT,
-  dbPath: process.env.APP_DB_PATH ?? 'data/app.db',
+  dbPath: process.env.APP_DB_PATH ?? path.join(repoRoot, 'data/app.db'),
 } as const;

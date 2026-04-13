@@ -7164,7 +7164,7 @@ git tag chunk-5-complete
 
 **Steps:**
 
-- [ ] **Step 1.1: Create package.json**
+- [x] **Step 1.1: Create package.json**
 
 Create file `apps/dashboard/package.json`:
 ```json
@@ -7203,7 +7203,7 @@ Create file `apps/dashboard/package.json`:
 }
 ```
 
-- [ ] **Step 1.2: Create tsconfig.json**
+- [x] **Step 1.2: Create tsconfig.json**
 
 Create file `apps/dashboard/tsconfig.json`:
 ```json
@@ -7223,7 +7223,7 @@ Create file `apps/dashboard/tsconfig.json`:
 }
 ```
 
-- [ ] **Step 1.3: Create next.config.mjs**
+- [x] **Step 1.3: Create next.config.mjs**
 
 Create file `apps/dashboard/next.config.mjs`:
 ```javascript
@@ -7236,7 +7236,7 @@ const nextConfig = {
 export default nextConfig;
 ```
 
-- [ ] **Step 1.4: Create Tailwind config files**
+- [x] **Step 1.4: Create Tailwind config files**
 
 Create file `apps/dashboard/tailwind.config.ts`:
 ```typescript
@@ -7257,7 +7257,7 @@ export default {
 };
 ```
 
-- [ ] **Step 1.5: Create app/globals.css**
+- [x] **Step 1.5: Create app/globals.css**
 
 Create file `apps/dashboard/app/globals.css`:
 ```css
@@ -7272,7 +7272,7 @@ body {
 }
 ```
 
-- [ ] **Step 1.6: Create app/layout.tsx**
+- [x] **Step 1.6: Create app/layout.tsx**
 
 Create file `apps/dashboard/app/layout.tsx`:
 ```typescript
@@ -7303,7 +7303,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-- [ ] **Step 1.7: Install + Commit**
+- [x] **Step 1.7: Install + Commit**
 
 Run:
 ```bash
@@ -7326,7 +7326,7 @@ Expected: zero typecheck errors.
 
 **Steps:**
 
-- [ ] **Step 2.1: Create db.ts (singleton)**
+- [x] **Step 2.1: Create db.ts (singleton)**
 
 Create file `apps/dashboard/lib/db.ts`:
 ```typescript
@@ -7354,7 +7354,7 @@ export function getEventBus(): EventBus {
 }
 ```
 
-- [ ] **Step 2.2: Create SSE events route**
+- [x] **Step 2.2: Create SSE events route**
 
 Create file `apps/dashboard/app/api/events/route.ts`:
 ```typescript
@@ -7410,7 +7410,7 @@ export async function GET(request: NextRequest) {
 }
 ```
 
-- [ ] **Step 2.3: Create status API route**
+- [x] **Step 2.3: Create status API route**
 
 Create file `apps/dashboard/app/api/status/route.ts`:
 ```typescript
@@ -7429,7 +7429,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 2.4: Typecheck + Commit**
+- [x] **Step 2.4: Typecheck + Commit**
 
 Run:
 ```bash
@@ -7453,7 +7453,7 @@ Expected: zero errors.
 
 **Steps:**
 
-- [ ] **Step 3.1: Create useSseEvents hook**
+- [x] **Step 3.1: Create useSseEvents hook**
 
 Create file `apps/dashboard/lib/useSseEvents.ts`:
 ```typescript
@@ -7496,7 +7496,7 @@ export function useSseEvents(endpoint: string = '/api/events'): SseEvent[] {
 }
 ```
 
-- [ ] **Step 3.2: Create LoopStatusCard component**
+- [x] **Step 3.2: Create LoopStatusCard component**
 
 Create file `apps/dashboard/components/LoopStatusCard.tsx`:
 ```typescript
@@ -7548,7 +7548,7 @@ export function LoopStatusCard({ events }: Props) {
 }
 ```
 
-- [ ] **Step 3.3: Create BalanceDisplay component**
+- [x] **Step 3.3: Create BalanceDisplay component**
 
 Create file `apps/dashboard/components/BalanceDisplay.tsx`:
 ```typescript
@@ -7607,7 +7607,7 @@ export function BalanceDisplay({ events }: Props) {
 }
 ```
 
-- [ ] **Step 3.4: Create EventFeed component**
+- [x] **Step 3.4: Create EventFeed component**
 
 Create file `apps/dashboard/components/EventFeed.tsx`:
 ```typescript
@@ -7660,7 +7660,7 @@ export function EventFeed({ events }: Props) {
 }
 ```
 
-- [ ] **Step 3.5: Create app/page.tsx**
+- [x] **Step 3.5: Create app/page.tsx**
 
 Create file `apps/dashboard/app/page.tsx`:
 ```typescript
@@ -7694,7 +7694,7 @@ export default function HomePage() {
 }
 ```
 
-- [ ] **Step 3.6: Typecheck + Commit**
+- [x] **Step 3.6: Typecheck + Commit**
 
 Run:
 ```bash
@@ -7713,7 +7713,7 @@ git commit -m "feat(dashboard): add live loop home page with SSE hook + 3 card c
 
 **Steps:**
 
-- [ ] **Step 4.1: Create payments API route**
+- [x] **Step 4.1: Create payments API route**
 
 Create file `apps/dashboard/app/api/payments/route.ts`:
 ```typescript
@@ -7733,7 +7733,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 4.2: Create transaction log page (direct DB access, no self-fetch)**
+- [x] **Step 4.2: Create transaction log page (direct DB access, no self-fetch)**
 
 Create file `apps/dashboard/app/tx/page.tsx`:
 ```typescript
@@ -7842,7 +7842,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 ```
 
-- [ ] **Step 4.3: Typecheck + Commit**
+- [x] **Step 4.3: Typecheck + Commit**
 
 Run:
 ```bash
@@ -7855,7 +7855,7 @@ git commit -m "feat(dashboard): add transaction log page with X Layer explorer l
 
 ### Task 5: Chunk 6 Exit Criteria Check
 
-- [ ] **Step 5.1: Verify typecheck across all workspaces**
+- [x] **Step 5.1: Verify typecheck across all workspaces**
 
 Run:
 ```bash
@@ -7865,7 +7865,7 @@ pnpm -r test
 
 Expected: zero errors, 92+ tests passing.
 
-- [ ] **Step 5.2: Manual smoke test dashboard**
+- [x] **Step 5.2: Manual smoke test dashboard**
 
 Run:
 ```bash
@@ -7877,7 +7877,7 @@ In browser, open `http://localhost:3000/` and `http://localhost:3000/tx`.
 
 Expected: Home page shows empty loop status cards. Tx log shows "No payments recorded yet" (if DB empty). Both pages render without error.
 
-- [ ] **Step 5.3: Tag completion**
+- [x] **Step 5.3: Tag completion**
 
 ```bash
 git tag chunk-6-complete

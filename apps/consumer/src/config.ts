@@ -13,7 +13,8 @@ import {
 // of which directory pnpm filters into when running `pnpm --filter consumer start`.
 // apps/consumer/src/config.ts -> ../../../.env (repo root)
 const currentDir = path.dirname(fileURLToPath(import.meta.url));
-loadEnv({ path: path.resolve(currentDir, '../../../.env') });
+const repoRoot = path.resolve(currentDir, '../../..');
+loadEnv({ path: path.resolve(repoRoot, '.env') });
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -29,7 +30,7 @@ export const config = {
   consumerAccountId: requireEnv('CONSUMER_ACCOUNT_ID'),
   producerUrl: process.env.PRODUCER_URL ?? `http://localhost:${PRODUCER_PORT}`,
   usdgContract: USDG_CONTRACT,
-  dbPath: process.env.APP_DB_PATH ?? 'data/app.db',
+  dbPath: process.env.APP_DB_PATH ?? path.join(repoRoot, 'data/app.db'),
   minBalanceUsdg: Number(process.env.MIN_BALANCE_USDG ?? '0.5'),
   targetCyclesPerMin: Number(process.env.TARGET_CYCLES_PER_MIN ?? '15'),
 } as const;
