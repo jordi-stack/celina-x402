@@ -36,64 +36,59 @@ The Consumer is the only agent with autonomous behavior. The Producer reacts to 
 
 ## Architecture Overview
 
-```
-           +--------------------+         +--------------------+
-           |  Consumer process  |         |  Producer process  |
-           |  (Node, Celina)    |         |  (Fastify, port    |
-           |                    |         |   3001)            |
-           +---------+----------+         +----------+---------+
-                     |                               |
-                     |   1. POST /v1/<service>       |
-                     |------------------------------>|
-                     |                               |
-                     |   2. 402 Challenge header     |
-                     |<------------------------------|
-                     |                               |
-          3. sign via onchainos x402-payment CLI     |
-                     |                               |
-                     |   4. Replay with signature    |
-                     |------------------------------>|
-                     |                               |
-                     |        +------------+   5. verify
-                     |        | Facilitator|<---------|
-                     |        |  HMAC REST |          |
-                     |        +------------+          |
-                     |                               |
-                     |   6. 200 + MCP data payload   |
-                     |<------------------------------|
-                     |                               |
-                     |        +------------+   7. settle
-                     |        | Facilitator|<---------|
-                     |        |  HMAC REST |          |
-                     |        +------------+          |
-                     |                               |
-            +--------+-------------------------------+--------+
-            |              Shared SQLite database              |
-            |            <repo>/data/app.db (WAL)              |
-            +--------+-----------------------------------------+
-                     |
-                     |   8. SSE stream of state changes
-                     v
-              +---------------+
-              | Dashboard     |
-              | Next.js 14    |
-              | port 3000     |
-              +---------------+
+One full earn-pay-earn cycle across the three processes and the OKX Facilitator:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Consumer<br/>(Celina, Node)
+    participant P as Producer<br/>(Fastify :3001)
+    participant F as OKX Facilitator<br/>(HMAC REST)
+    participant DB as Shared SQLite<br/>(data/app.db, WAL)
+    participant D as Dashboard<br/>(Next.js :3000)
+
+    C->>P: POST /v1/{service}
+    P-->>C: HTTP 402 + PAYMENT-REQUIRED header
+    Note over C: Sign via onchainos<br/>x402-payment CLI (TEE)
+    C->>P: Replay with PAYMENT-SIGNATURE
+    P->>F: /verify (HMAC-signed)
+    F-->>P: isValid = true, payer address
+    P->>DB: insertPendingPayment (nonce, cycle)
+    P-->>C: HTTP 200 + MCP data payload
+    P->>F: /settle (syncSettle)
+    F-->>P: tx_hash on X Layer chain 196
+    P->>DB: updateSettlement (tx_hash, status)
+    C->>DB: findPaymentByNonce (poll 500ms)
+    DB-->>D: SSE stream of state changes
 ```
 
-All three processes resolve `data/app.db` to the same absolute path via `import.meta.url`, so Producer writes (`insertPendingPayment`, `updateSettlement`) are visible to Consumer (`findPaymentByNonce` polling) and to the Dashboard (`useSseEvents` hook) without any IPC layer. SQLite runs in WAL mode for concurrent reads.
+All three processes resolve `data/app.db` to the same absolute path via `import.meta.url`, so Producer writes are visible to Consumer polling and to the Dashboard event stream without any IPC layer. SQLite runs in WAL mode for concurrent reads.
 
 The Consumer loop is driven by a pure-function state machine in `packages/orchestrator/src/state/machine.ts` with 9 states and 19 transitions:
 
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+    IDLE --> DECIDING: LOOP_START
+    DECIDING --> SIGNING: LLM_RESPONSE
+    DECIDING --> FAILED: LLM_TIMEOUT
+    DECIDING --> FAILED: LLM_429 (downgrade model)
+    SIGNING --> REPLAYING: PAYMENT_PROOF_READY
+    SIGNING --> FAILED: CLI_ERROR
+    REPLAYING --> VERIFYING: HTTP_200
+    REPLAYING --> DECIDING: HTTP_402 (cycleRetry < 3)
+    REPLAYING --> FAILED: HTTP_402 (cycleRetry exhausted)
+    REPLAYING --> FAILED: HTTP_500
+    VERIFYING --> SETTLING: VERIFY_OK
+    VERIFYING --> FAILED: VERIFY_INVALID
+    SETTLING --> COMPLETED: SETTLE_OK
+    SETTLING --> FAILED: SETTLE_TIMEOUT
+    COMPLETED --> IDLE: CYCLE_RESET (next cycle)
+    FAILED --> HALTED: RETRY (stateRetry exhausted)
+    HALTED --> IDLE: USER_RESUME
 ```
-IDLE -> DECIDING -> SIGNING -> REPLAYING -> VERIFYING -> SETTLING -> COMPLETED
-                                 |                                     |
-                                 v                                     v
-                               FAILED ----RETRY----> prev state     IDLE (next cycle)
-                                 |
-                                 v
-                              HALTED (resumable)
-```
+
+One additional transition is not shown on the graph because its target is dynamic: `FAILED + RETRY` (when `stateRetryCount < 1`) returns to `ctx.previousState` rather than a fixed state, so the retry can resume from wherever the cycle broke. Plus one dead-code path exists in the source (`SIGNING + CLI_CONFIRMING -> SIGNING`) left over from a pre-v2.2.8 CLI assumption; the current `onchainos payment x402-pay` is non-interactive so this branch never fires. Counted together the machine has exactly 19 declared transitions.
 
 ### Monorepo layout
 
