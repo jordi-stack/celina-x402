@@ -22,6 +22,12 @@ export default function HomePage() {
         >
           Transactions -&gt;
         </a>
+        <a
+          href="/mcp"
+          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
+        >
+          MCP Activity -&gt;
+        </a>
       </div>
     </div>
   );
