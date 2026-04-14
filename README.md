@@ -97,7 +97,7 @@ x402-earn-pay-earn/
   apps/
     producer/         Fastify service, x402-gate Fastify plugin, 3 paid routes
     consumer/         Celina loop, Groq reasoner, budget tracker, model throttler
-    dashboard/        Next.js 14 App Router, SSE /api/events, / and /tx pages
+    dashboard/        Next.js 14 App Router with live balance card (MCP-backed), SSE /api/events feed, and / /tx /mcp pages
   packages/
     shared/           TypeScript types, constants, Zod schemas for MCP + x402
     okx-auth/         HMAC-SHA256 signer for Facilitator REST auth
@@ -133,14 +133,14 @@ To verify Celina is alive on-chain, look up either address on OKLink X Layer and
 
 ## OnchainOS and Uniswap Skill Usage
 
-Celina's external surface is entirely OnchainOS. Wallet identity and TEE signing come from Agentic Wallet, x402 payment proofs are signed by the x402-payment CLI, verification and settlement run through the OKX Facilitator REST API, two of the three paid services source their data from the OKX MCP Server, and the third uses the DEX trenches CLI for on-chain risk analysis. Every call below is exercised live in each loop cycle, not just once at boot.
+Celina's external surface is entirely OnchainOS. Wallet identity and TEE signing come from Agentic Wallet, x402 payment proofs are signed by the x402-payment CLI, verification and settlement run through the OKX Facilitator REST API, two of the three paid services source their data from the OKX MCP Server, the third paid service uses the DEX trenches CLI for on-chain risk analysis, and the dashboard reads live wallet balances via a third MCP tool so judges can watch the loop close in real time. Every call below is exercised live in each loop cycle, not just once at boot. Three distinct MCP tools are invoked in production: `dex-okx-dex-quote`, `dex-okx-market-token-price-info`, and `dex-okx-balance-total-token-balances`.
 
 | OnchainOS module        | How Celina uses it                                                                                                          | Code location                                                     |
 |-------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
 | `okx-agentic-wallet`    | Single AK login creates two X Layer accounts (Consumer + Producer). Loop calls `wallet switch`, `wallet balance`, `wallet history` each cycle. | `packages/onchain-clients/src/wallet.ts`                          |
 | `okx-x402-payment`      | Non-interactive CLI signs the `transferWithAuthorization` payload for each x402 challenge.                                  | `packages/onchain-clients/src/x402-payment.ts`                    |
 | OKX Facilitator API     | Producer calls `/api/v6/pay/x402/verify` before delivering data and `/api/v6/pay/x402/settle` after, authenticated via HMAC-SHA256 with `OK-ACCESS-KEY`, `OK-ACCESS-SIGN`, `OK-ACCESS-TIMESTAMP`, `OK-ACCESS-PASSPHRASE` headers. | `packages/okx-auth/src/sign.ts`, `apps/producer/src/facilitator/client.ts` |
-| OKX MCP Server          | Producer sources two of its three paid services from MCP tools `dex-okx-dex-quote` and `dex-okx-market-token-price-info` over JSON-RPC. The envelope `result.content[0].text` is parsed via a Zod generic helper. | `packages/mcp-client/src/client.ts`, `apps/producer/src/routes/`  |
+| OKX MCP Server          | Three tools over JSON-RPC. Producer sources two paid services from `dex-okx-dex-quote` (swap-quote) and `dex-okx-market-token-price-info` (market-snapshot). Dashboard reads live Consumer and Producer USDG balances via `dex-okx-balance-total-token-balances`, refreshing every 5 seconds so the earn-pay-earn loop is visible at a glance. Every MCP call is logged to `mcp_calls` and surfaced on the `/mcp` activity page. The envelope `result.content[0].text` is parsed via a Zod generic helper captured from live spikes. | `packages/mcp-client/src/client.ts`, `apps/producer/src/routes/`, `apps/dashboard/app/api/live-balance/route.ts`, `apps/dashboard/app/mcp/page.tsx` |
 | `okx-dex-trenches`      | Third paid service uses the trenches CLI (`memepump token-dev-info` + `memepump token-bundle-info`) plus an in-app risk scoring function that combines rug pull count and sniper count. | `packages/onchain-clients/src/trenches.ts`, `apps/producer/src/routes/trench-scan.ts` |
 
 Uniswap AI is not used: X Layer does not host a canonical Uniswap deployment, so `swap-quote` sources its data from the OKX DEX aggregator via the MCP `dex-okx-dex-quote` tool.
@@ -165,7 +165,7 @@ The Consumer loop is in `apps/consumer/src/agent/loop.ts`. One full cycle runs l
 
 **8. Consumer polling.** Back in the Consumer loop, right after the replay returns HTTP 200, `waitForSettlement` polls `payments` by nonce every 500 ms for up to 30 seconds. As soon as it sees `status='settled'` with a non-null `tx_hash`, it transitions the state machine `VERIFYING -> SETTLING -> COMPLETED` and emits `SERVICE_CONSUMED` + `LOOP_CYCLE_COMPLETED` events.
 
-**9. Dashboard update.** The Dashboard `/api/events` SSE endpoint reads the same SQLite database and pushes each new event to the browser. The home page has three cards (balance, velocity, cycle log) and the `/tx` page lists every transaction hash with a clickable X Layer explorer link.
+**9. Dashboard update.** The Dashboard `/api/events` SSE endpoint reads the same SQLite database and pushes each new event to the browser. The home page leads with a Live Wallet Balance card that polls `/api/live-balance` every five seconds and fetches Consumer + Producer USDG totals via the OKX MCP balance tool, so the earn-pay-earn flow is visually obvious while the loop runs. Below that sit the existing Loop Status and SSE-driven Balance Display cards plus a rolling event feed. Two subpages back this up: `/tx` lists every settled transaction with clickable X Layer explorer links, and `/mcp` shows a live MCP activity log with total call count, success rate, average duration, and a rolling table of every tool invocation the Producer has made.
 
 The three paid services:
 
