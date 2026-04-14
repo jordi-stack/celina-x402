@@ -29,7 +29,6 @@ data/
 
 # Internal build docs and tooling (not shipped to public repo)
 docs/
-scripts/src/spikes/findings/
 .superpowers
 
 # OS
