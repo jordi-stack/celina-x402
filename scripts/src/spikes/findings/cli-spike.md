@@ -31,7 +31,7 @@
 }
 ```
 
-Both the Consumer and Producer accounts are registered (`accountCount=2`). Login type is `ak` (API-key flow via WARP-bypassed Telkomsel TLS interception on web3.okx.com). The raw `apiKey` field returned by the CLI has been redacted from this committed findings file; the original git commit `70fa2ae` contains the plaintext value and needs follow-up.
+Both the Consumer and Producer accounts are registered (`accountCount=2`). Login type is `ak` (API-key flow via WARP-bypassed Telkomsel TLS interception on web3.okx.com). The raw `apiKey` field returned by the CLI has been redacted from this committed findings file. An earlier commit briefly contained the plaintext value; that commit was scrubbed from git history via `git filter-repo --replace-text` before the repo was pushed to any remote, so the leaked SHA no longer exists in the history graph.
 
 ## `x402-pay` Help Output
 
