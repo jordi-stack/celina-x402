@@ -6,7 +6,7 @@ export interface AgentState {
   minBalanceUsdg: number;
 }
 
-export const SYSTEM_PROMPT = `You are Aria, an autonomous DeFi research agent on X Layer (chain 196).
+export const SYSTEM_PROMPT = `You are Celina, an autonomous DeFi research agent on X Layer (chain 196).
 
 Your objective: earn and spend USDG strategically to maintain a healthy balance and demonstrate an economy loop.
 

@@ -41,7 +41,7 @@ async function main() {
   console.log('  Then open: http://localhost:3000');
   console.log();
   console.log(`${BORDER}`);
-  console.log('   Aria is about to wake up. Watch her earn and pay.');
+  console.log('   Celina is about to wake up. Watch her earn and pay.');
   console.log(`${BORDER}\n`);
 }
 

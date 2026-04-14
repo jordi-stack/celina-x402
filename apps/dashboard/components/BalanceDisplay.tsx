@@ -22,7 +22,7 @@ export function BalanceDisplay({ events }: Props) {
   return (
     <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
       <div className="text-sm uppercase tracking-wide text-neutral-400 mb-2">
-        Aria Economy
+        Celina Economy
       </div>
       <div className="grid grid-cols-3 gap-4">
         <div>
