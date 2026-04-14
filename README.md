@@ -171,9 +171,9 @@ The three paid services:
 
 | Service           | Route                | Price     | Data source                             |
 |-------------------|----------------------|-----------|-----------------------------------------|
-| `market-snapshot` | `POST /v1/market-snapshot` | 0.01 USDG (`10000` minimal units)  | OKX MCP `dex-okx-market-token-price-info` (batch `{items:[...]}`) |
-| `swap-quote`      | `POST /v1/swap-quote`      | 0.015 USDG (`15000` minimal units) | OKX MCP `dex-okx-dex-quote`             |
-| `trench-scan`     | `POST /v1/trench-scan`     | 0.02 USDG (`20000` minimal units)  | `okx-dex-trenches` CLI, dev + bundle info plus risk score |
+| `market-snapshot` | `POST /v1/market-snapshot` | 0.001 USDG (`1000` minimal units)  | OKX MCP `dex-okx-market-token-price-info` (batch `{items:[...]}`) |
+| `swap-quote`      | `POST /v1/swap-quote`      | 0.0015 USDG (`1500` minimal units) | OKX MCP `dex-okx-dex-quote`             |
+| `trench-scan`     | `POST /v1/trench-scan`     | 0.002 USDG (`2000` minimal units)  | `okx-dex-trenches` CLI, dev + bundle info plus risk score |
 
 Throttling: `ModelThrottler` downgrades Groq model on 429, then steps back up after a quiet window with no new rate-limit hits. `BudgetTracker` holds a rolling window of recent earnings and recent spends so the LLM has context. Retry: up to 3 replays per cycle on HTTP 402 mismatch, then the cycle is marked `FAILED`.
 

@@ -12,7 +12,7 @@ export const swapQuoteRoute: FastifyPluginAsync<PluginOpts> = async (fastify, op
     '/v1/swap-quote',
     {
       config: {
-        x402: { amount: '15000', service: 'swap-quote' },
+        x402: { amount: '1500', service: 'swap-quote' },
       },
       schema: {
         body: {

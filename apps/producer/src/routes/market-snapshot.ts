@@ -12,7 +12,7 @@ export const marketSnapshotRoute: FastifyPluginAsync<PluginOpts> = async (fastif
     '/v1/market-snapshot',
     {
       config: {
-        x402: { amount: '10000', service: 'market-snapshot' },
+        x402: { amount: '1000', service: 'market-snapshot' },
       },
       schema: {
         body: {

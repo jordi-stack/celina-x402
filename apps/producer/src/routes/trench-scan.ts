@@ -10,7 +10,7 @@ export const trenchScanRoute: FastifyPluginAsync<PluginOpts> = async (fastify, o
     '/v1/trench-scan',
     {
       config: {
-        x402: { amount: '20000', service: 'trench-scan' },
+        x402: { amount: '2000', service: 'trench-scan' },
       },
       schema: {
         body: {
