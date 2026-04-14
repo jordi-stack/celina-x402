@@ -43,6 +43,7 @@ export async function runLoop(deps: LoopDependencies): Promise<void> {
   const cycleIntervalMs = Math.floor(60_000 / config.targetCyclesPerMin);
 
   while (true) {
+    try {
     const startedAt = Date.now();
 
     // Idempotent cycle creation. Retries (HTTP_402 -> DECIDING) re-enter with
@@ -172,7 +173,8 @@ export async function runLoop(deps: LoopDependencies): Promise<void> {
         cycleNumber,
         transition('SIGNING', { type: 'PAYMENT_PROOF_READY' }, ctx).nextState
       );
-    } catch {
+    } catch (err) {
+      console.error(`[cycle ${cycleNumber}] sign error:`, (err as Error).message);
       deps.store.updateCycleState(
         cycleNumber,
         transition('SIGNING', { type: 'CLI_ERROR' }, ctx).nextState
@@ -247,6 +249,11 @@ export async function runLoop(deps: LoopDependencies): Promise<void> {
 
     await sleep(cycleIntervalMs);
     cycleNumber++;
+    } catch (err) {
+      console.error(`[cycle ${cycleNumber}] transient error:`, (err as Error).message);
+      await sleep(cycleIntervalMs);
+      cycleNumber++;
+    }
   }
 }
 

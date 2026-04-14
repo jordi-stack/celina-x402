@@ -63,7 +63,8 @@ const x402GatePlugin: FastifyPluginAsync<X402GateOptions> = async (fastify, opts
     let decoded: PaymentPayload;
     try {
       decoded = decodePaymentPayload(paymentHeader);
-    } catch {
+    } catch (err) {
+      request.log.warn({ err }, 'x402-gate: payment-signature decode failed');
       reply.code(402).send({ error: 'Invalid PAYMENT-SIGNATURE header' });
       return reply;
     }
@@ -75,6 +76,7 @@ const x402GatePlugin: FastifyPluginAsync<X402GateOptions> = async (fastify, opts
     });
 
     if (!verifyResult.isValid) {
+      request.log.warn({ reason: verifyResult.invalidMessage }, 'x402-gate: facilitator rejected payment');
       reply.code(402).send({ error: verifyResult.invalidMessage });
       return reply;
     }

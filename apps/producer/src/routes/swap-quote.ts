@@ -37,13 +37,12 @@ export const swapQuoteRoute: FastifyPluginAsync<PluginOpts> = async (fastify, op
       };
       const start = Date.now();
       try {
-        // Refined schema from Day-1 MCP spike: slippage is not a valid tool arg.
-        // swapMode defaults to 'exactIn' via Zod schema default.
         const quote = await opts.mcpClient.getQuote({
           chainIndex: '196',
           fromTokenAddress: body.fromTokenAddress,
           toTokenAddress: body.toTokenAddress,
           amount: body.amount,
+          swapMode: 'exactIn',
         });
         opts.store.logMcpCall({
           timestamp: Date.now(),

@@ -56,7 +56,7 @@ export interface HistoryEntry {
  * Accepts either a pre-wrapped envelope or a bare payload so that unit tests
  * which mock stdout with the unwrapped shape still work.
  */
-function unwrapEnvelope<T>(result: SpawnCliResult, operation: string): T {
+export function unwrapEnvelope<T>(result: SpawnCliResult, operation: string): T {
   const parsed = result.parseJson<{ ok?: boolean; data?: T; error?: string } | T>();
   if (
     parsed !== null &&

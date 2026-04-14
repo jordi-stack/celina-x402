@@ -1,4 +1,5 @@
 import { spawnCli } from './util/spawn-cli';
+import { unwrapEnvelope } from './wallet';
 import type { Accept } from '@x402/shared';
 
 export interface SignPaymentOptions {
@@ -37,6 +38,6 @@ export class X402PaymentClient {
     if (result.exitCode !== 0) {
       throw new Error(`x402-pay failed: ${result.stderr || result.stdout || 'unknown error'}`);
     }
-    return result.parseJson<PaymentProof>();
+    return unwrapEnvelope<PaymentProof>(result, 'x402-pay');
   }
 }
