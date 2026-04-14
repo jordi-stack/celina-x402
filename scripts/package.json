@@ -13,6 +13,7 @@
     "demo": "tsx src/demo-runner.ts"
   },
   "dependencies": {
+    "@x402/mcp-client": "workspace:*",
     "@x402/okx-auth": "workspace:*",
     "@x402/onchain-clients": "workspace:*",
     "@x402/orchestrator": "workspace:*",

@@ -31,6 +31,6 @@ export const config = {
   producerUrl: process.env.PRODUCER_URL ?? `http://localhost:${PRODUCER_PORT}`,
   usdgContract: USDG_CONTRACT,
   dbPath: process.env.APP_DB_PATH ?? path.join(repoRoot, 'data/app.db'),
-  minBalanceUsdg: Number(process.env.MIN_BALANCE_USDG ?? '0.5'),
-  targetCyclesPerMin: Number(process.env.TARGET_CYCLES_PER_MIN ?? '15'),
+  maxCallsPerSession: Number(process.env.MAX_CALLS_PER_SESSION ?? '4'),
+  sessionBudgetUsdg: process.env.SESSION_BUDGET_USDG ?? '0.10',
 } as const;

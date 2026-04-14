@@ -59,8 +59,25 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
     cycle_number INTEGER,
     payload TEXT NOT NULL
   )`,
+  // Added 2026-04-15 for the Intelligence Agent pivot. One row per user
+  // question that the Consumer reasons over. `calls` is a JSON array of
+  // ResearchCall objects; `synthesis` is a JSON ResearchSynthesis or null
+  // while still in-flight. CREATE IF NOT EXISTS keeps existing databases
+  // safe — no data migration needed because no prior deploy has this table.
+  `CREATE TABLE IF NOT EXISTS query_sessions (
+    id TEXT PRIMARY KEY,
+    question TEXT NOT NULL,
+    status TEXT NOT NULL,
+    calls TEXT NOT NULL,
+    total_spent TEXT NOT NULL,
+    synthesis TEXT,
+    created_at INTEGER NOT NULL,
+    completed_at INTEGER,
+    error TEXT
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_audit_events_id ON audit_events(id)`,
   `CREATE INDEX IF NOT EXISTS idx_payments_cycle ON payments(cycle_number)`,
   `CREATE INDEX IF NOT EXISTS idx_payments_nonce ON payments(nonce)`,
   `CREATE INDEX IF NOT EXISTS idx_decisions_cycle ON decisions(cycle_number)`,
+  `CREATE INDEX IF NOT EXISTS idx_query_sessions_created ON query_sessions(created_at DESC)`,
 ];

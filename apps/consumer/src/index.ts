@@ -3,11 +3,10 @@ import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { migrate, Store, EventBus } from '@x402/orchestrator';
 import { WalletClient, X402PaymentClient } from '@x402/onchain-clients';
+import { CONSUMER_API_PORT } from '@x402/shared';
 import { config } from './config';
 import { ReasonerClient } from './reasoner/client';
-import { ModelThrottler } from './reasoner/throttler';
-import { BudgetTracker } from './agent/budget';
-import { runLoop } from './agent/loop';
+import { buildAskServer } from './api/ask-server';
 
 async function main() {
   mkdirSync(path.dirname(config.dbPath), { recursive: true });
@@ -17,55 +16,39 @@ async function main() {
   const store = new Store(db);
   const eventBus = new EventBus(db, 'consumer');
   const walletClient = new WalletClient();
-
-  // Note: reconcileOnBoot is Producer-side. Consumer only observes settlement
-  // via SQLite payments table polling inside the loop.
-
-  const throttler = new ModelThrottler({
-    primary: config.groqPrimaryModel,
-    fast: config.groqFastModel,
-    upgradeBackAfterMs: 60_000,
-  });
+  const paymentClient = new X402PaymentClient();
 
   const reasoner = new ReasonerClient({
     apiKey: config.groqApiKey,
     baseUrl: config.groqBaseUrl,
-    model: throttler.currentModel(),
+    model: config.groqPrimaryModel,
   });
 
-  const budget = new BudgetTracker({ minBalanceUsdg: config.minBalanceUsdg });
-  const paymentClient = new X402PaymentClient();
-
-  // Earnings watcher: tail audit_events for Producer-side SETTLEMENT_COMPLETED.
-  // Feeds the BudgetTracker so the reasoner sees earn+spend history each cycle.
-  let lastEventId = 0;
-  setInterval(() => {
-    const events = eventBus.replay({ sinceId: lastEventId, limit: 100 });
-    for (const event of events) {
-      lastEventId = Math.max(lastEventId, event.id);
-      if (event.source === 'producer' && event.kind === 'SETTLEMENT_COMPLETED') {
-        const amount = event.payload.amount as string | undefined;
-        const service = event.payload.service as string | undefined;
-        if (amount && service) {
-          budget.addEarning(service, amount, event.timestamp);
-        }
-      }
-    }
-  }, 1000);
-
-  await runLoop({
-    db,
+  const fastify = await buildAskServer({
     store,
     eventBus,
     reasoner,
-    throttler,
-    budget,
     walletClient,
     paymentClient,
+    runnerConfig: {
+      producerUrl: config.producerUrl,
+      consumerAccountId: config.consumerAccountId,
+      maxCalls: config.maxCallsPerSession,
+      budgetUsdg: config.sessionBudgetUsdg,
+    },
   });
+
+  const port = Number(process.env.CONSUMER_API_PORT ?? CONSUMER_API_PORT);
+  try {
+    await fastify.listen({ port, host: '0.0.0.0' });
+    fastify.log.info(`Consumer /ask listening on port ${port}`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
 }
 
 main().catch((err) => {
-  console.error('Consumer loop fatal error:', err);
+  console.error('Consumer fatal error:', err);
   process.exit(1);
 });

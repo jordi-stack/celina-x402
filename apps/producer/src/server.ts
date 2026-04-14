@@ -6,15 +6,18 @@ import { migrate, Store, EventBus, reconcileOnBoot } from '@x402/orchestrator';
 import { OKXMCPClient } from '@x402/mcp-client';
 import {
   TrenchesClient,
+  SecurityClient,
   WalletClient,
   createWalletHistoryFetcher,
 } from '@x402/onchain-clients';
 import { config } from './config';
 import { FacilitatorClient } from './facilitator/client';
 import x402GatePlugin from './plugins/x402-gate';
-import { marketSnapshotRoute } from './routes/market-snapshot';
-import { swapQuoteRoute } from './routes/swap-quote';
-import { trenchScanRoute } from './routes/trench-scan';
+import { researchTokenReportRoute } from './routes/research-token-report';
+import { researchWalletRiskRoute } from './routes/research-wallet-risk';
+import { researchLiquidityHealthRoute } from './routes/research-liquidity-health';
+import { signalWhaleWatchRoute } from './routes/signal-whale-watch';
+import { signalNewTokenScoutRoute } from './routes/signal-new-token-scout';
 
 async function bootstrap() {
   mkdirSync(path.dirname(config.dbPath), { recursive: true });
@@ -59,6 +62,7 @@ async function bootstrap() {
     apiKey: config.okxApiKey,
   });
   const trenchesClient = new TrenchesClient();
+  const securityClient = new SecurityClient();
   const facilitator = new FacilitatorClient({
     baseUrl: config.facilitatorBase,
     apiKey: config.okxApiKey,
@@ -77,9 +81,25 @@ async function bootstrap() {
     producerAddress: config.producerAddress,
   });
 
-  await fastify.register(marketSnapshotRoute, { mcpClient, store });
-  await fastify.register(swapQuoteRoute, { mcpClient, store });
-  await fastify.register(trenchScanRoute, { trenchesClient });
+  await fastify.register(researchTokenReportRoute, {
+    mcpClient,
+    securityClient,
+    trenchesClient,
+    store,
+  });
+  await fastify.register(researchWalletRiskRoute, {
+    mcpClient,
+    securityClient,
+    store,
+  });
+  await fastify.register(researchLiquidityHealthRoute, { mcpClient, store });
+  await fastify.register(signalWhaleWatchRoute, { mcpClient, store });
+  await fastify.register(signalNewTokenScoutRoute, {
+    mcpClient,
+    securityClient,
+    trenchesClient,
+    store,
+  });
 
   try {
     await fastify.listen({ port: config.port, host: '0.0.0.0' });

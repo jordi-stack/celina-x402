@@ -1,7 +1,14 @@
 import OpenAI from 'openai';
-import type { Decision } from '@x402/shared';
-import { DecisionSchema } from '@x402/shared';
-import { SYSTEM_PROMPT, buildUserPrompt, type AgentState } from './prompts';
+import type { ResearchStep, ResearchSynthesis } from '@x402/shared';
+import { ResearchStepSchema, ResearchSynthesisSchema } from '@x402/shared';
+import {
+  STEP_SYSTEM_PROMPT,
+  SYNTHESIZE_SYSTEM_PROMPT,
+  buildPlanUserPrompt,
+  buildSynthesizeUserPrompt,
+  type PlanStepContext,
+  type SynthesizeContext,
+} from './prompts';
 
 export interface ReasonerConfig {
   apiKey: string;
@@ -16,8 +23,13 @@ export interface ReasonMetadata {
   model: string;
 }
 
-export interface ReasonResult {
-  decision: Decision;
+export interface PlanStepResult {
+  step: ResearchStep;
+  metadata: ReasonMetadata;
+}
+
+export interface SynthesizeResult {
+  synthesis: ResearchSynthesis;
   metadata: ReasonMetadata;
 }
 
@@ -36,21 +48,20 @@ export class ReasonerClient {
       });
   }
 
-  async reasonWithMeta(state: AgentState): Promise<ReasonResult> {
+  async planStep(ctx: PlanStepContext): Promise<PlanStepResult> {
     const start = Date.now();
-    const userPrompt = buildUserPrompt(state);
+    const userPrompt = buildPlanUserPrompt(ctx);
 
-    const doCall = async () => {
-      return this.client.chat.completions.create({
+    const doCall = () =>
+      this.client.chat.completions.create({
         model: this.config.model,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: STEP_SYSTEM_PROMPT },
           { role: 'user', content: userPrompt },
         ],
         response_format: { type: 'json_object' },
-        temperature: 0.3,
+        temperature: 0.2,
       });
-    };
 
     let response = await doCall();
     let content = response.choices[0]?.message?.content ?? '';
@@ -64,10 +75,9 @@ export class ReasonerClient {
       parsed = JSON.parse(content);
     }
 
-    const decision = DecisionSchema.parse(parsed);
-
+    const step = ResearchStepSchema.parse(parsed);
     return {
-      decision,
+      step,
       metadata: {
         promptTokens: response.usage?.prompt_tokens ?? 0,
         completionTokens: response.usage?.completion_tokens ?? 0,
@@ -77,8 +87,42 @@ export class ReasonerClient {
     };
   }
 
-  async reason(state: AgentState): Promise<Decision> {
-    const result = await this.reasonWithMeta(state);
-    return result.decision;
+  async synthesize(ctx: SynthesizeContext): Promise<SynthesizeResult> {
+    const start = Date.now();
+    const userPrompt = buildSynthesizeUserPrompt(ctx);
+
+    const doCall = () =>
+      this.client.chat.completions.create({
+        model: this.config.model,
+        messages: [
+          { role: 'system', content: SYNTHESIZE_SYSTEM_PROMPT },
+          { role: 'user', content: userPrompt },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.3,
+      });
+
+    let response = await doCall();
+    let content = response.choices[0]?.message?.content ?? '';
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content);
+    } catch {
+      response = await doCall();
+      content = response.choices[0]?.message?.content ?? '';
+      parsed = JSON.parse(content);
+    }
+
+    const synthesis = ResearchSynthesisSchema.parse(parsed);
+    return {
+      synthesis,
+      metadata: {
+        promptTokens: response.usage?.prompt_tokens ?? 0,
+        completionTokens: response.usage?.completion_tokens ?? 0,
+        latencyMs: Date.now() - start,
+        model: this.config.model,
+      },
+    };
   }
 }

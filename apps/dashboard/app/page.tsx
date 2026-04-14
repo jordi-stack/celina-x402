@@ -1,22 +1,48 @@
 'use client';
 
-import { useSseEvents } from '@/lib/useSseEvents';
-import { LoopStatusCard } from '@/components/LoopStatusCard';
-import { BalanceDisplay } from '@/components/BalanceDisplay';
+import { useState } from 'react';
+import type { ResearchSession } from '@x402/shared';
+import { AskBox } from '@/components/AskBox';
+import { ReportCard } from '@/components/ReportCard';
+import { SessionHistory } from '@/components/SessionHistory';
 import { BalanceCard } from '@/components/BalanceCard';
-import { EventFeed } from '@/components/EventFeed';
 
 export default function HomePage() {
-  const events = useSseEvents('/api/events');
+  const [activeSession, setActiveSession] = useState<ResearchSession | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
+
+  const handleSessionStart = () => {
+    setRefreshToken((n) => n + 1);
+  };
+
+  const handleSessionComplete = (session: ResearchSession) => {
+    setActiveSession(session);
+    setRefreshToken((n) => n + 1);
+  };
 
   return (
     <div className="space-y-6">
       <BalanceCard />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <LoopStatusCard events={events} />
-        <BalanceDisplay events={events} />
+      <AskBox
+        onSessionStart={handleSessionStart}
+        onSessionComplete={handleSessionComplete}
+      />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          {activeSession ? (
+            <ReportCard session={activeSession} />
+          ) : (
+            <div className="rounded-lg border border-dashed border-neutral-800 bg-neutral-900/20 p-10 text-center text-sm text-neutral-500">
+              Ask a question above to run a research session.
+            </div>
+          )}
+        </div>
+        <SessionHistory
+          selectedId={activeSession?.id ?? null}
+          onSelect={setActiveSession}
+          refreshToken={refreshToken}
+        />
       </div>
-      <EventFeed events={events} />
       <div className="flex gap-4 text-sm">
         <a
           href="/tx"

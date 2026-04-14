@@ -1,126 +1,100 @@
-# Celina - x402 Earn-Pay-Earn
+# Celina - x402 Onchain Intelligence Agent
 
-An autonomous agentic economy loop on X Layer. Celina is a DeFi research agent who sells token research and uses the income to buy more research. Every transaction is a real x402 payment settled on X Layer chain 196. Zero gas because USDG transfers on X Layer cost nothing.
+Celina is an onchain research agent on X Layer. You ask it a question about a token, a wallet, or a market situation, and it pays for the answer. Every paid call is a real x402 HTTP micropayment settled in USDG on X Layer chain 196. Zero gas because USDG transfers on X Layer cost nothing.
 
 Built for the OKX Build X hackathon, X Layer Arena track (I'm Human subcategory).
 
-## Project Intro
+## What it does
 
-Most x402 projects pick one side of the protocol: either an agent that pays for services, or a service that charges agents. Celina does both inside the same project, in a single closed loop.
+Type a question like "is 0x4ae4...d2dc8 a safe token to buy?" into the dashboard. Celina parses the question, picks one of five paid research services, signs an x402 payment proof via the OKX Agentic Wallet, replays the HTTP request with the proof, reads the paywalled data, and decides whether it needs another call. When it has enough evidence it synthesizes a verdict with a confidence rating and a short list of concrete facts from the data it saw. The dashboard shows the question, each paid call (with its X Layer tx hash), and the final report card, all in one view.
 
-- Celina runs on two separate X Layer accounts owned by one OKX Agentic Wallet login.
-- Account 1 (Consumer) holds USDG and spends it to consume paid data services.
-- Account 2 (Producer) hosts those services behind x402 paywalls and collects USDG.
-- A Groq-powered reasoner picks which service to call next based on recent earnings, recent spends, and minimum balance rules.
-- A Next.js dashboard reads the shared SQLite database and streams every state transition to the browser in real time.
-
-The loop is the product. You fund Celina once with a few USDG, press play, and the app runs cycles forever without any manual signing. Every settlement produces a clickable X Layer explorer link in the dashboard.
+The agent is goal-directed, not a random-walk loop. It plans the next step with a Groq LLM, treats each service as a priced tool, and stops as soon as it can answer. A single question typically costs 0.01 to 0.05 USDG and runs 1 to 3 paid service calls.
 
 ## Agents and Onchain Identity
 
-Celina's onchain identity is an **OKX Agentic Wallet**, created through the `onchainos wallet` CLI under a single AK (API key) login. One wallet login owns two X Layer accounts, and each account is assigned a distinct agent role inside the application.
+Celina's onchain identity is an **OKX Agentic Wallet** created through the `onchainos wallet` CLI under a single AK (API key) login. One wallet login owns two X Layer accounts, and each account has a distinct role.
 
-| Agent       | Account ID (Agentic Wallet)              | X Layer address                                | Role                                                                                             |
-|-------------|-------------------------------------------|--------------------------------------------------|--------------------------------------------------------------------------------------------------|
-| Consumer    | `c90a20ab-d544-47e6-b227-0c259e0db291`   | `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25`   | Runs the Celina reasoning loop. Holds USDG, reads balance each cycle, signs x402 payment proofs, replays the HTTP request, ingests the returned data. |
-| Producer    | `a782c10a-0678-4164-8419-2085797410d6`   | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc`   | Hosts 3 paid services behind x402 paywalls. Receives settled USDG into this account. Does not run an autonomous loop; it is a reactive HTTP server.   |
+| Agent | Account ID (Agentic Wallet) | X Layer address | Role |
+|---|---|---|---|
+| Consumer | `c90a20ab-d544-47e6-b227-0c259e0db291` | `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25` | The intelligence agent. Holds USDG, plans research steps with Groq, signs x402 proofs, replays paid HTTP requests, synthesizes verdicts. |
+| Producer | `a782c10a-0678-4164-8419-2085797410d6` | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc` | The research service host. Exposes 5 paid routes behind x402 paywalls, queries OnchainOS modules, collects USDG. |
 
-Why two agents under one wallet? The x402 protocol requires a buyer and a seller at distinct addresses. Running both roles under one Agentic Wallet (rather than two separate logins) makes the project cleaner:
-
-- One set of credentials in `.env`, not two.
-- Switching roles is a single CLI call (`onchainos wallet switch <account-id>`) rather than a full logout and login cycle.
-- Both accounts share the same TEE-backed signing policy, so if the judges want to review the policy for either agent the path is identical.
-- Producer and Consumer can be audited as a single economic unit on OKLink: filter by either address and the counterpart shows up on every transaction.
-
-The Consumer is the only agent with autonomous behavior. The Producer reacts to HTTP requests, verifies payment proofs via the Facilitator, delivers data, and settles. Neither role ever holds a private key in application memory. Every signature goes through the `onchainos` CLI, which keeps keys inside the Agentic Wallet's TEE.
+Both roles live inside one Agentic Wallet login so the credentials set in `.env` stays small and the Producer and Consumer can be audited as one economic unit on OKLink. Neither side ever holds a private key in application memory; every signature goes through the `onchainos` CLI, which keeps keys inside the wallet's TEE.
 
 ## Architecture Overview
 
-One full earn-pay-earn cycle across the three processes and the OKX Facilitator:
+A research session starts with one POST from the dashboard and drives a loop inside the Consumer that keeps calling paid services until the LLM decides it has enough:
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant C as Consumer<br/>(Celina, Node)
+    participant U as User (Dashboard)
+    participant C as Consumer /ask<br/>(Fastify :3002)
+    participant G as Groq LLM
     participant P as Producer<br/>(Fastify :3001)
     participant F as OKX Facilitator<br/>(HMAC REST)
     participant DB as Shared SQLite<br/>(data/app.db, WAL)
-    participant D as Dashboard<br/>(Next.js :3000)
 
-    C->>P: POST /v1/{service}
-    P-->>C: HTTP 402 + PAYMENT-REQUIRED header
-    Note over C: Sign via onchainos<br/>x402-payment CLI (TEE)
-    C->>P: Replay with PAYMENT-SIGNATURE
-    P->>F: /verify (HMAC-signed)
-    F-->>P: isValid = true, payer address
-    P->>DB: insertPendingPayment (nonce, cycle)
-    P-->>C: HTTP 200 + MCP data payload
-    P->>F: /settle (syncSettle)
-    F-->>P: tx_hash on X Layer chain 196
-    P->>DB: updateSettlement (tx_hash, status)
-    C->>DB: findPaymentByNonce (poll 500ms)
-    DB-->>D: SSE stream of state changes
+    U->>C: POST /ask { question }
+    C->>DB: insert query_sessions row (status=planning)
+    loop Until LLM says synthesize or abort
+        C->>G: planStep(question, callsSoFar)
+        G-->>C: { action, service?, serviceArgs? }
+        alt action = call_service
+            C->>P: POST /research/<name>
+            P-->>C: 402 + PAYMENT-REQUIRED
+            Note over C: Sign via onchainos x402-pay (TEE)
+            C->>P: Replay with PAYMENT-SIGNATURE
+            P->>F: /verify (HMAC)
+            F-->>P: isValid = true
+            P->>DB: insertPendingPayment
+            P-->>C: 200 + research data
+            P->>F: /settle (syncSettle)
+            F-->>P: tx_hash on chain 196
+            P->>DB: updateSettlement
+            C->>DB: poll payments for tx_hash
+            C->>DB: append ResearchCall to session
+        end
+    end
+    C->>G: synthesize(question, calls)
+    G-->>C: { verdict, confidence, summary, keyFacts }
+    C->>DB: update query_sessions row (status=done)
+    C-->>U: ResearchSession JSON
 ```
 
-All three processes resolve `data/app.db` to the same absolute path via `import.meta.url`, so Producer writes are visible to Consumer polling and to the Dashboard event stream without any IPC layer. SQLite runs in WAL mode for concurrent reads.
+All three processes (Producer, Consumer, Dashboard) resolve `data/app.db` to the same absolute path, so the Producer's settlement write is visible to the Consumer's payment poll and to the Dashboard's session list without any IPC layer. SQLite runs in WAL mode for concurrent reads.
 
-The Consumer loop is driven by a pure-function state machine in `packages/orchestrator/src/state/machine.ts` with 9 states and 19 transitions:
-
-```mermaid
-stateDiagram-v2
-    [*] --> IDLE
-    IDLE --> DECIDING: LOOP_START
-    DECIDING --> SIGNING: LLM_RESPONSE
-    DECIDING --> FAILED: LLM_TIMEOUT
-    DECIDING --> FAILED: LLM_429 (downgrade model)
-    SIGNING --> REPLAYING: PAYMENT_PROOF_READY
-    SIGNING --> FAILED: CLI_ERROR
-    REPLAYING --> VERIFYING: HTTP_200
-    REPLAYING --> DECIDING: HTTP_402 (cycleRetry < 3)
-    REPLAYING --> FAILED: HTTP_402 (cycleRetry exhausted)
-    REPLAYING --> FAILED: HTTP_500
-    VERIFYING --> SETTLING: VERIFY_OK
-    VERIFYING --> FAILED: VERIFY_INVALID
-    SETTLING --> COMPLETED: SETTLE_OK
-    SETTLING --> FAILED: SETTLE_TIMEOUT
-    COMPLETED --> IDLE: CYCLE_RESET (next cycle)
-    FAILED --> HALTED: RETRY (stateRetry exhausted)
-    HALTED --> IDLE: USER_RESUME
-```
-
-One additional transition is not shown on the graph because its target is dynamic: `FAILED + RETRY` (when `stateRetryCount < 1`) returns to `ctx.previousState` rather than a fixed state, so the retry can resume from wherever the cycle broke. Plus one dead-code path exists in the source (`SIGNING + CLI_CONFIRMING -> SIGNING`) left over from a pre-v2.2.8 CLI assumption; the current `onchainos payment x402-pay` is non-interactive so this branch never fires. Counted together the machine has exactly 19 declared transitions.
+The Consumer session runner lives in [`apps/consumer/src/agent/session-runner.ts`](apps/consumer/src/agent/session-runner.ts). It hard-caps the number of calls per session (default 4) so a broken LLM can never burn the whole USDG balance, and it writes every state transition back to the `query_sessions` table so the dashboard can show mid-flight state while the research runs.
 
 ### Monorepo layout
 
 ```
 x402-earn-pay-earn/
   apps/
-    producer/         Fastify service, x402-gate Fastify plugin, 3 paid routes
-    consumer/         Celina loop, Groq reasoner, budget tracker, model throttler
-    dashboard/        Next.js 14 App Router with live balance card (MCP-backed), SSE /api/events feed, and / /tx /mcp pages
+    producer/         Fastify service, x402-gate plugin, 5 paid research routes
+    consumer/         Fastify /ask server, session runner, goal-directed Groq reasoner
+    dashboard/        Next.js 14 App Router: AskBox, ReportCard, session history, live balance
   packages/
-    shared/           TypeScript types, constants, Zod schemas for MCP + x402
+    shared/           TypeScript types, constants, Zod schemas for MCP + x402 + research
     okx-auth/         HMAC-SHA256 signer for Facilitator REST auth
-    orchestrator/     SQLite store, event bus, state machine, boot reconciler
+    orchestrator/     SQLite store (cycles, payments, query_sessions), event bus, state machine
     mcp-client/       OKX MCP JSON-RPC client with envelope unwrapping
-    onchain-clients/  Typed wrappers for onchainos CLI (wallet, x402-payment, trenches)
+    onchain-clients/  Typed wrappers for onchainos CLI (wallet, x402-payment, trenches, security)
   scripts/
-    src/health-check.ts    14-step pre-flight validation
-    src/demo-runner.ts     Terminal bootstrap runner
-    src/spikes/            Day-1 verification spikes (kept for reference)
-  tests/integration/       Opt-in tests hitting live X Layer mainnet (RUN_INTEGRATION=1)
-  data/                    SQLite database lives here (gitignored)
-  .env                     All 16 env vars (gitignored)
+    src/health-check.ts    Pre-flight validation
+    src/spikes/            Day-1 and pivot verification spikes (kept as evidence)
+  data/                    SQLite database (gitignored)
+  .env                     All env vars (gitignored)
 ```
 
 ## Deployment Addresses
 
-Celina does not deploy a custom smart contract. The app pays in USDG (Global Dollar), a stablecoin issued by Paxos Digital Singapore under the Global Dollar Network and deployed to X Layer as part of OKX's GDN integration. OKX is a Global Dollar Network member, not the issuer. The two accounts that run the loop were created via the OKX Agentic Wallet CLI under a single AK login.
+Celina does not deploy a custom smart contract. The app pays in USDG (Global Dollar), a stablecoin issued by Paxos Digital Singapore under the Global Dollar Network and brought to X Layer via OKX's GDN membership. OKX is a GDN member, not the issuer.
 
-| Role                | X Layer address                              |
-|---------------------|----------------------------------------------|
-| Consumer (buyer)    | `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25` |
-| Producer (seller)   | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc` |
+| Role | X Layer address |
+|---|---|
+| Consumer (buyer) | `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25` |
+| Producer (seller) | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc` |
 | USDG token contract | `0x4ae46a509f6b1d9056937ba4500cb143933d2dc8` |
 | USDT token contract | `0x779ded0c9e1022225f8e0630b35a9b54be713736` |
 
@@ -129,63 +103,46 @@ Celina does not deploy a custom smart contract. The app pays in USDG (Global Dol
 - RPC URL: `https://rpc.xlayer.tech`
 - Explorer: `https://www.oklink.com/xlayer`
 
-To verify Celina is alive on-chain, look up either address on OKLink X Layer and filter for USDG token transfers. Every completed cycle produces exactly one `transferWithAuthorization` call signed by the Consumer and settled by the OKX Facilitator.
+To verify Celina is alive on-chain, look up either address on OKLink X Layer and filter for USDG token transfers. Each paid research call produces exactly one `transferWithAuthorization` signed by the Consumer and settled by the OKX Facilitator.
 
 ## OnchainOS and Uniswap Skill Usage
 
-Celina's external surface is entirely OnchainOS. Wallet identity and TEE signing come from Agentic Wallet, x402 payment proofs are signed by the x402-payment CLI, verification and settlement run through the OKX Facilitator REST API, two of the three paid services source their data from the OKX MCP Server, the third paid service uses the DEX trenches CLI for on-chain risk analysis, and the dashboard reads live wallet balances via a third MCP tool so judges can watch the loop close in real time. Every call below is exercised live in each loop cycle, not just once at boot. Three distinct MCP tools are invoked in production: `dex-okx-dex-quote`, `dex-okx-market-token-price-info`, and `dex-okx-balance-total-token-balances`.
+Celina's external surface is entirely OnchainOS. Wallet identity and TEE signing come from Agentic Wallet, x402 payment proofs are signed by the x402-payment CLI, verification and settlement run through the OKX Facilitator REST API, four of the five paid research services source their data from the OKX MCP Server, and two of them also pull from the Security module and DEX Trenches module to cover risk flags and dev history. Every module below is exercised live inside a research session.
 
-| OnchainOS module        | How Celina uses it                                                                                                          | Code location                                                     |
-|-------------------------|-----------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
-| `okx-agentic-wallet`    | Single AK login creates two X Layer accounts (Consumer + Producer). Loop calls `wallet switch`, `wallet balance`, `wallet history` each cycle. | `packages/onchain-clients/src/wallet.ts`                          |
-| `okx-x402-payment`      | Non-interactive CLI signs the `transferWithAuthorization` payload for each x402 challenge.                                  | `packages/onchain-clients/src/x402-payment.ts`                    |
-| OKX Facilitator API     | Producer calls `/api/v6/pay/x402/verify` before delivering data and `/api/v6/pay/x402/settle` after, authenticated via HMAC-SHA256 with `OK-ACCESS-KEY`, `OK-ACCESS-SIGN`, `OK-ACCESS-TIMESTAMP`, `OK-ACCESS-PASSPHRASE` headers. | `packages/okx-auth/src/sign.ts`, `apps/producer/src/facilitator/client.ts` |
-| OKX MCP Server          | Three tools over JSON-RPC. Producer sources two paid services from `dex-okx-dex-quote` (swap-quote) and `dex-okx-market-token-price-info` (market-snapshot). Dashboard reads live Consumer and Producer USDG balances via `dex-okx-balance-total-token-balances`, refreshing every 5 seconds so the earn-pay-earn loop is visible at a glance. Every MCP call is logged to `mcp_calls` and surfaced on the `/mcp` activity page. The envelope `result.content[0].text` is parsed via a Zod generic helper captured from live spikes. | `packages/mcp-client/src/client.ts`, `apps/producer/src/routes/`, `apps/dashboard/app/api/live-balance/route.ts`, `apps/dashboard/app/mcp/page.tsx` |
-| `okx-dex-trenches`      | Third paid service uses the trenches CLI (`memepump token-dev-info` + `memepump token-bundle-info`) plus an in-app risk scoring function that combines rug pull count and sniper count. | `packages/onchain-clients/src/trenches.ts`, `apps/producer/src/routes/trench-scan.ts` |
+| OnchainOS module | How Celina uses it | Code location |
+|---|---|---|
+| `okx-agentic-wallet` | Single AK login creates two X Layer accounts. The Consumer switches to its own account before each research session and reads its USDG balance for the dashboard card. | [`packages/onchain-clients/src/wallet.ts`](packages/onchain-clients/src/wallet.ts) |
+| `okx-x402-payment` | Non-interactive CLI signs the `transferWithAuthorization` payload for each paid service call. | [`packages/onchain-clients/src/x402-payment.ts`](packages/onchain-clients/src/x402-payment.ts) |
+| OKX Facilitator API | Producer calls `/api/v6/pay/x402/verify` before returning research data and `/api/v6/pay/x402/settle` after, authenticated via HMAC-SHA256 with `OK-ACCESS-*` headers. | [`packages/okx-auth/src/sign.ts`](packages/okx-auth/src/sign.ts), [`apps/producer/src/facilitator/client.ts`](apps/producer/src/facilitator/client.ts) |
+| OKX MCP Server | JSON-RPC over HTTP with 9 tools wired up: `dex-okx-market-token-price-info`, `dex-okx-market-token-holder`, `dex-okx-market-candlesticks`, `dex-okx-market-trades`, `dex-okx-dex-quote`, `dex-okx-balance-total-token-balances`, `dex-okx-balance-total-value`. Every call is logged to the `mcp_calls` table and surfaced on the `/mcp` dashboard page. | [`packages/mcp-client/src/client.ts`](packages/mcp-client/src/client.ts), [`apps/producer/src/routes/`](apps/producer/src/routes/) |
+| OKX Security module | Powers honeypot flag detection, approval risk scanning, and the full 23-flag token risk report used by `research-token-report`, `research-wallet-risk`, and `signal-new-token-scout`. | [`packages/onchain-clients/src/security.ts`](packages/onchain-clients/src/security.ts) |
+| `okx-dex-trenches` | `memepump token-dev-info` + `memepump token-bundle-info` provide dev rug-pull history, sniper counts, and bundle-launch detection. Used by the token report and the new-token scout. | [`packages/onchain-clients/src/trenches.ts`](packages/onchain-clients/src/trenches.ts) |
 
-Uniswap AI is not used: X Layer does not host a canonical Uniswap deployment, so `swap-quote` sources its data from the OKX DEX aggregator via the MCP `dex-okx-dex-quote` tool.
+Uniswap AI is not used: X Layer does not host a canonical Uniswap deployment, so any quote-related research sources its data from the OKX DEX aggregator via the MCP `dex-okx-dex-quote` tool.
 
-## Working Mechanics
+## The paid research services
 
-The Consumer loop is in `apps/consumer/src/agent/loop.ts`. One full cycle runs like this:
+Every route lives on the Producer (`:3001`) behind the x402 gate. Prices are in USDG minimal units (6 decimals). All five routes are registered in [`apps/producer/src/server.ts`](apps/producer/src/server.ts).
 
-**1. Cycle bookkeeping.** The loop increments `cycleNumber`, inserts a row into the `cycles` table, and transitions the state machine from `IDLE` to `DECIDING`. If the loop is retrying an existing cycle (because of a prior `HTTP_402`), the insert is skipped so the primary key stays unique.
+| Service | Route | Price | What it returns |
+|---|---|---|---|
+| `research-token-report` | `POST /research/token-report` | 0.015 USDG | Full risk report for a token: 17 red-flag booleans from Security, dev rug-pull history from Trenches, bundle-launch detection, top-10 holder concentration, current price, overall risk score and verdict (`safe` / `caution` / `avoid`). |
+| `research-wallet-risk` | `POST /research/wallet-risk` | 0.010 USDG | Wallet health check: total USD value, number of risk-flagged tokens held, active approval count from the Security module, verdict (`healthy` / `caution` / `dangerous`). |
+| `research-liquidity-health` | `POST /research/liquidity-health` | 0.008 USDG | Liquidity depth by probing the OKX DEX aggregator with 10 / 100 / 1000 USDG swap sizes, plus a 24-hour candlestick volatility range. Verdict `deep` / `thin` / `fragile`. |
+| `signal-whale-watch` | `POST /signal/whale-watch` | 0.005 USDG | Recent whale activity: filters the last 100 market trades for any ≥ $1000 entry, computes buy vs sell pressure, cross-references the top-holder list. Sentiment `accumulating` / `distributing` / `neutral`. |
+| `signal-new-token-scout` | `POST /signal/new-token-scout` | 0.003 USDG | Momentum score for a new launch: 60 minutes of 1m candles, 24h / 1h price changes, transaction count, offset by dev rug-pull count and bundle flags. Verdict `promising` / `mixed` / `skip`. |
 
-**2. Balance read.** The loop calls `wallet switch` to the Consumer account, then `wallet balance --chain xlayer --token-address <USDG>` to get the current spendable amount. The onchainos CLI wraps every response in a `{ ok, data }` envelope, so `WalletClient.balance()` unwraps it before returning the raw on-chain figure.
-
-**3. Reasoning.** The loop builds a state object (`balanceUsdg`, `recentEarnings`, `recentSpends`, `cycleNumber`, `minBalanceUsdg`) and sends it to Groq. The primary model is `llama-3.3-70b-versatile`. If Groq returns HTTP 429, the `ModelThrottler` downgrades to `llama-3.1-8b-instant` for the next cycle and upgrades back once a quiet window passes with no new rate-limit hits. The LLM returns a JSON decision with one of three actions: `consume_service` (with a service name), `wait`, or `halt`. Groq's free tier is enough to run the demo: the throttler absorbs rate limit hits automatically, so you never need paid credits to see the full loop.
-
-**4. Challenge fetch.** For a `consume_service` decision, the loop sends `POST /v1/<service>` to the Producer with the canonical demo body. The Fastify `x402-gate` plugin has a `preHandler` hook that responds with HTTP 402 and a `PAYMENT-REQUIRED` header. The header is a base64-encoded `Challenge402` object with one `accepts` entry: scheme `exact`, network `eip155:196`, amount in USDG minimal units, payTo the Producer address, maxTimeoutSeconds 60.
-
-**5. Signing.** The loop calls `X402PaymentClient.signPayment` which shells out to `onchainos payment x402-pay` with the accepts array. The CLI (v2.2.8) is non-interactive by design, so there is no retry or `--force` flag. It returns a `PaymentPayload` containing `authorization` (from, to, value, nonce, validBefore, validAfter) and a signature.
-
-**6. Replay.** The loop re-sends the same HTTP request, this time with a `PAYMENT-SIGNATURE` header carrying the encoded proof. The Fastify `preHandler` decodes the header, calls the OKX Facilitator `/verify` endpoint with HMAC auth, checks `isValid`, and writes a pending row into the `payments` table before allowing the route handler to run. The route handler hits either the OKX MCP server or the trenches CLI and returns JSON.
-
-**7. Settlement.** When the route handler finishes, Fastify's `onResponse` hook calls the Facilitator `/settle` endpoint with `syncSettle: true`. The Facilitator broadcasts the transfer on chain 196, waits for inclusion, and returns the transaction hash. The hook writes `tx_hash`, `settled_at`, and `status='settled'` into the same SQLite row.
-
-**8. Consumer polling.** Back in the Consumer loop, right after the replay returns HTTP 200, `waitForSettlement` polls `payments` by nonce every 500 ms for up to 30 seconds. As soon as it sees `status='settled'` with a non-null `tx_hash`, it transitions the state machine `VERIFYING -> SETTLING -> COMPLETED` and emits `SERVICE_CONSUMED` + `LOOP_CYCLE_COMPLETED` events.
-
-**9. Dashboard update.** The Dashboard `/api/events` SSE endpoint reads the same SQLite database and pushes each new event to the browser. The home page leads with a Live Wallet Balance card that polls `/api/live-balance` every five seconds and fetches Consumer + Producer USDG totals via the OKX MCP balance tool, so the earn-pay-earn flow is visually obvious while the loop runs. Below that sit the existing Loop Status and SSE-driven Balance Display cards plus a rolling event feed. Two subpages back this up: `/tx` lists every settled transaction with clickable X Layer explorer links, and `/mcp` shows a live MCP activity log with total call count, success rate, average duration, and a rolling table of every tool invocation the Producer has made.
-
-The three paid services:
-
-| Service           | Route                | Price     | Data source                             |
-|-------------------|----------------------|-----------|-----------------------------------------|
-| `market-snapshot` | `POST /v1/market-snapshot` | 0.001 USDG (`1000` minimal units)  | OKX MCP `dex-okx-market-token-price-info` (batch `{items:[...]}`) |
-| `swap-quote`      | `POST /v1/swap-quote`      | 0.0015 USDG (`1500` minimal units) | OKX MCP `dex-okx-dex-quote`             |
-| `trench-scan`     | `POST /v1/trench-scan`     | 0.002 USDG (`2000` minimal units)  | `okx-dex-trenches` CLI, dev + bundle info plus risk score |
-
-Throttling: `ModelThrottler` downgrades Groq model on 429, then steps back up after a quiet window with no new rate-limit hits. `BudgetTracker` holds a rolling window of recent earnings and recent spends so the LLM has context. Retry: up to 3 replays per cycle on HTTP 402 mismatch, then the cycle is marked `FAILED`.
+The Consumer does not pick services by hand. For each session the Groq reasoner reads the question plus the list of calls made so far, and returns one of: `call_service` (with service + args), `synthesize` (the data is enough), or `abort` (the question can't be answered from this menu). The full prompt that teaches the model what each service does is in [`apps/consumer/src/reasoner/prompts.ts`](apps/consumer/src/reasoner/prompts.ts).
 
 ## Running It Locally
 
 ### Prerequisites
 
-- Node 20 (pinned in `.nvmrc`, Node 24 breaks `better-sqlite3`)
+- Node 20 (pinned in `.nvmrc`; Node 24 breaks `better-sqlite3`)
 - pnpm 9
-- `onchainos` CLI v2.2.8 or newer (`curl -sSL https://raw.githubusercontent.com/okx/onchainos-skills/main/install.sh | sh`)
+- `onchainos` CLI v2.2.8 or newer
 - OKX Developer Portal API key + secret + passphrase (https://web3.okx.com/onchain-os/dev-portal)
-- Groq API key, free tier is sufficient for running the full demo (https://console.groq.com/keys). The free tier has rate limits on `llama-3.3-70b-versatile` but the in-app `ModelThrottler` auto-downgrades to `llama-3.1-8b-instant` on 429 responses, so the loop keeps running without paid credits.
+- Groq API key, free tier is enough for the demo (https://console.groq.com/keys)
 - A VPN such as Cloudflare WARP if your ISP TLS-intercepts `web3.okx.com` (some Indonesian ISPs do)
 
 ### Setup
@@ -202,35 +159,32 @@ onchainos wallet status               # copy Account 1 id
 onchainos wallet switch <producer-id> # copy address
 # Fill CONSUMER_ACCOUNT_ID, PRODUCER_ACCOUNT_ID, PRODUCER_ADDRESS in .env
 
-# Send 5 to 10 USDG to the Consumer X Layer address from OKX CEX
-# or any X Layer wallet
-
-pnpm health-check                     # must report 14/14 before demo
+# Send 5 to 10 USDG to the Consumer X Layer address
+pnpm health-check
 ```
 
-### Run the loop
+### Run the agent
 
 Three terminals:
 
 ```bash
 # Terminal 1
-pnpm dev:producer
+pnpm dev:producer      # Fastify :3001 with the 5 paid routes
 
 # Terminal 2
-pnpm dev:consumer
+pnpm dev:consumer      # Fastify :3002 with POST /ask
 
 # Terminal 3
-pnpm dev:dashboard
+pnpm dev:dashboard     # Next.js :3000
 ```
 
-Open http://localhost:3000 and watch Celina run.
+Open http://localhost:3000, type a question into the AskBox, and watch Celina plan, pay, and synthesize. Every call on the report card has a clickable X Layer explorer link to the settlement tx.
 
 ### Tests
 
 ```bash
-pnpm -r typecheck
-pnpm -r test                 # 98 unit tests across 9 workspaces
-pnpm test:integration        # opt-in, hits X Layer mainnet
+pnpm -r typecheck      # 9 workspaces
+pnpm -r test           # unit tests across all workspaces
 ```
 
 ## Team
@@ -243,13 +197,13 @@ Celina is a solo build.
 
 ## Project Positioning in the X Layer Ecosystem
 
-X Layer is OKX's L2. The ecosystem needs three things to feel alive: real agents that move money on their own, visible on-chain activity, and apps that use the gas-free stablecoin rail OKX built around Paxos-issued USDG. Celina is shaped to score on all three.
+X Layer is OKX's L2. The ecosystem needs real agents that move money on their own, visible on-chain activity, and apps that actually use the OnchainOS + USDG rail OKX built this year. Celina is shaped to score on all three.
 
-- **Paxos USDG on X Layer, zero-gas settlements.** USDG is the Global Dollar stablecoin issued by Paxos Digital Singapore and regulated under the MAS single-currency stablecoin framework. OKX joined the Global Dollar Network and brought USDG live on X Layer, where the L2's native gas abstraction makes USDG transfers fee-free. Every Celina cycle settles USDG via `transferWithAuthorization` on chain 196, so hundreds of cycles run on tiny balances without ever touching OKB for gas. This is the cleanest demonstration of the USDG-plus-X-Layer rail that OKX shipped this quarter.
-- **Visible agent traffic.** Target velocity is 12 to 20 cycles per minute. Over a 30-minute demo window that produces 360+ new settlements, all attributable to one running agent, all clickable in the OKLink explorer. This is the kind of continuous on-chain activity the ecosystem currently lacks outside of swap bots.
-- **Loop, not link.** The dominant x402 demo pattern is "agent pays a service". Celina flips half of the loop back into the same process, so the ecosystem sees earn + spend in a single tx stream. The resulting economic pattern is closed: Celina does not need external funding after the first seed transfer.
-- **OnchainOS-first, not bolted on.** Every external call goes through an OnchainOS module: wallet via Agentic Wallet CLI, payments via x402-payment CLI, data via MCP server, risk via trenches CLI. There is no direct RPC call, no manual transaction construction, no custom signer. If OnchainOS modules work, Celina works. If they break, Celina surfaces exactly which module broke via the health check.
-- **Boring where it matters.** State is in SQLite, not Redis. The dashboard is server-rendered Next.js, not a Web3 wallet-connect dance. The LLM is Groq, not a local model. Every choice trades ambition for demo-day reliability. The judges should be able to fund a wallet, start three processes, and see an autonomous economy loop within two minutes.
+- **A goal the user can express in plain English.** Most x402 demos pick a fixed request pattern and run it on a timer. Celina takes natural-language questions from the judge, lets a Groq LLM plan which paid services to call, and surfaces the full trace in the dashboard. You can feel the LLM spending money to answer you.
+- **Deep OnchainOS integration.** Every external call goes through an OnchainOS module: Agentic Wallet for identity and signing, x402-payment for proofs, Facilitator for verify/settle, MCP Server for market data, Security for risk flags, Trenches for dev history. There is no direct RPC call, no manual transaction construction, no custom signer.
+- **Paxos USDG on X Layer, zero-gas settlements.** USDG is the Global Dollar stablecoin from Paxos Digital Singapore, regulated under the MAS single-currency framework. OKX brought it live on X Layer through the Global Dollar Network. X Layer's gas abstraction makes USDG transfers fee-free, so Celina can run hundreds of paid research calls on a few USDG without ever touching OKB.
+- **Visible traffic.** Each research session writes one to four `transferWithAuthorization` txs into OKLink, all attributable to the same agent address. A 30-minute demo produces a sessions list the judge can click through and a transactions page they can filter by wallet.
+- **Boring where it matters.** State is SQLite in WAL mode. The dashboard is server-rendered Next.js. The LLM is Groq. The retry logic is a state machine with counted transitions. Every choice trades ambition for demo-day reliability.
 
 ## License
 

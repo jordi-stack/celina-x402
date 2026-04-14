@@ -2,6 +2,10 @@ import type {
   Quote,
   TokenPriceInfo,
   TotalTokenBalances,
+  Candlestick,
+  TokenHolder,
+  MarketTrade,
+  BalanceTotalValue,
 } from '@x402/shared';
 import {
   QuoteSchema,
@@ -10,6 +14,14 @@ import {
   TokenPriceInfoParamsSchema,
   TotalTokenBalancesSchema,
   TotalTokenBalancesParamsSchema,
+  CandlesticksParamsSchema,
+  CandlestickSchema,
+  TokenHolderParamsSchema,
+  TokenHolderSchema,
+  MarketTradesParamsSchema,
+  MarketTradeSchema,
+  BalanceTotalValueParamsSchema,
+  BalanceTotalValueSchema,
   McpToolEnvelopeSchema,
 } from '@x402/shared';
 import { z } from 'zod';
@@ -107,11 +119,11 @@ export class OKXMCPClient {
    * 3. That JSON string decodes to `{ code, data: T[], msg }`.
    * 4. Return `data[0]` typed via the provided Zod schema.
    */
-  private async unwrapToolResult<T>(
+  private async parseEnvelope(
     toolName: string,
     args: Record<string, unknown>,
     dataSchema: z.ZodTypeAny
-  ): Promise<T> {
+  ): Promise<z.infer<ReturnType<typeof McpToolEnvelopeSchema>>> {
     const raw = await this.callTool<unknown>(toolName, args);
     const content = ContentEnvelopeSchema.parse(raw);
     const first = content.content[0];
@@ -125,11 +137,29 @@ export class OKXMCPClient {
         `Tool ${toolName} returned error code ${envelope.code}: ${envelope.msg}`
       );
     }
+    return envelope;
+  }
+
+  private async unwrapToolResult<T>(
+    toolName: string,
+    args: Record<string, unknown>,
+    dataSchema: z.ZodTypeAny
+  ): Promise<T> {
+    const envelope = await this.parseEnvelope(toolName, args, dataSchema);
     const item = envelope.data[0];
     if (!item) {
       throw new MCPError(`Tool ${toolName} returned empty data array`);
     }
     return item as T;
+  }
+
+  private async unwrapToolResultList<T>(
+    toolName: string,
+    args: Record<string, unknown>,
+    dataSchema: z.ZodTypeAny
+  ): Promise<T[]> {
+    const envelope = await this.parseEnvelope(toolName, args, dataSchema);
+    return envelope.data as T[];
   }
 
   async getQuote(params: z.input<typeof QuoteParamsSchema>): Promise<Quote> {
@@ -151,6 +181,48 @@ export class OKXMCPClient {
       'dex-okx-balance-total-token-balances',
       params,
       TotalTokenBalancesSchema
+    );
+  }
+
+  async getCandlesticks(
+    params: z.input<typeof CandlesticksParamsSchema>
+  ): Promise<Candlestick[]> {
+    const parsed = CandlesticksParamsSchema.parse(params);
+    return this.unwrapToolResultList<Candlestick>(
+      'dex-okx-market-candlesticks',
+      parsed,
+      CandlestickSchema
+    );
+  }
+
+  async getTokenHolders(
+    params: z.input<typeof TokenHolderParamsSchema>
+  ): Promise<TokenHolder[]> {
+    return this.unwrapToolResultList<TokenHolder>(
+      'dex-okx-market-token-holder',
+      params,
+      TokenHolderSchema
+    );
+  }
+
+  async getMarketTrades(
+    params: z.input<typeof MarketTradesParamsSchema>
+  ): Promise<MarketTrade[]> {
+    const parsed = MarketTradesParamsSchema.parse(params);
+    return this.unwrapToolResultList<MarketTrade>(
+      'dex-okx-market-trades',
+      parsed,
+      MarketTradeSchema
+    );
+  }
+
+  async getBalanceTotalValue(
+    params: z.input<typeof BalanceTotalValueParamsSchema>
+  ): Promise<BalanceTotalValue> {
+    return this.unwrapToolResult<BalanceTotalValue>(
+      'dex-okx-balance-total-value',
+      params,
+      BalanceTotalValueSchema
     );
   }
 }

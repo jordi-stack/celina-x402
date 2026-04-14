@@ -35,6 +35,9 @@ importers:
       dotenv:
         specifier: ^16.4.5
         version: 16.6.1
+      fastify:
+        specifier: ^5.0.0
+        version: 5.8.4
       openai:
         specifier: ^4.67.0
         version: 4.104.0(zod@3.25.76)
@@ -234,6 +237,9 @@ importers:
 
   scripts:
     dependencies:
+      '@x402/mcp-client':
+        specifier: workspace:*
+        version: link:../packages/mcp-client
       '@x402/okx-auth':
         specifier: workspace:*
         version: link:../packages/okx-auth

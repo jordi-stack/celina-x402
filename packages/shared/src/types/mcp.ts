@@ -136,6 +136,122 @@ export const TotalTokenBalancesSchema = z.object({
 });
 export type TotalTokenBalances = z.infer<typeof TotalTokenBalancesSchema>;
 
+// === dex-okx-market-candlesticks ===
+// Captured live 2026-04-15. Raw shape: data is array of 8-string tuples:
+// [timestamp_ms, open, high, low, close, volume_base, volume_usd, confirmed_0_or_1]
+export const CandlesticksParamsSchema = z.object({
+  chainIndex: z.literal('196'),
+  tokenContractAddress: evmAddress(),
+  bar: z
+    .enum([
+      '1s', '1m', '3m', '5m', '15m', '30m',
+      '1H', '2H', '4H', '6H', '12H', '1D', '1W', '1M', '3M',
+    ])
+    .default('1m'),
+  limit: z.string().regex(/^[0-9]+$/).default('100'),
+  after: z.string().optional(),
+  before: z.string().optional(),
+});
+export type CandlesticksParams = z.infer<typeof CandlesticksParamsSchema>;
+
+export const CandlestickSchema = z
+  .tuple([
+    z.string(), z.string(), z.string(), z.string(),
+    z.string(), z.string(), z.string(), z.string(),
+  ])
+  .transform(([ts, open, high, low, close, volume, volumeUsd, confirm]) => ({
+    ts,
+    open,
+    high,
+    low,
+    close,
+    volume,
+    volumeUsd,
+    confirmed: confirm === '1',
+  }));
+export type Candlestick = z.infer<typeof CandlestickSchema>;
+
+// === dex-okx-market-token-holder ===
+// Captured live 2026-04-15. data is array of 100 holder objects for USDG.
+// All numeric values are strings, PnL fields empty for stablecoins.
+export const TokenHolderParamsSchema = z.object({
+  chainIndex: z.literal('196'),
+  tokenContractAddress: evmAddress(),
+  // '' | '1'..'9' — see tagFilter description in tools/list
+  tagFilter: z.string().optional(),
+});
+export type TokenHolderParams = z.infer<typeof TokenHolderParamsSchema>;
+
+export const TokenHolderSchema = z.object({
+  cursor: z.string(),
+  holderWalletAddress: z.string(),
+  holdAmount: z.string(),
+  holdPercent: z.string(),
+  nativeTokenBalance: z.string(),
+  fundingSource: z.string(),
+  avgBuyPrice: z.string(),
+  avgSellPrice: z.string(),
+  boughtAmount: z.string(),
+  totalSellAmount: z.string(),
+  realizedPnlUsd: z.string(),
+  unrealizedPnlUsd: z.string(),
+  totalPnlUsd: z.string(),
+});
+export type TokenHolder = z.infer<typeof TokenHolderSchema>;
+
+// === dex-okx-market-trades ===
+// Captured live 2026-04-15. data is array of trade objects.
+export const MarketTradesParamsSchema = z.object({
+  chainIndex: z.literal('196'),
+  tokenContractAddress: evmAddress(),
+  limit: z.string().regex(/^[0-9]+$/).default('20'),
+  tagFilter: z.string().optional(),
+  walletAddressFilter: z.string().optional(),
+});
+export type MarketTradesParams = z.infer<typeof MarketTradesParamsSchema>;
+
+const ChangedTokenInfoSchema = z.object({
+  amount: z.string(),
+  tokenAddress: z.string(),
+  tokenSymbol: z.string(),
+});
+
+export const MarketTradeSchema = z
+  .object({
+    id: z.string(),
+    chainIndex: z.string(),
+    tokenContractAddress: z.string(),
+    time: z.string(),
+    price: z.string(),
+    dexName: z.string(),
+    poolLogoUrl: z.string().optional(),
+    txHashUrl: z.string().optional(),
+    isFiltered: z.string(),
+    type: z.string(),
+    userAddress: z.string(),
+    volume: z.string(),
+    changedTokenInfo: z.array(ChangedTokenInfoSchema),
+  })
+  .passthrough();
+export type MarketTrade = z.infer<typeof MarketTradeSchema>;
+
+// === dex-okx-balance-total-value ===
+// Captured live 2026-04-15. data is array with a single object: [{ totalValue }]
+export const BalanceTotalValueParamsSchema = z.object({
+  // Comma-separated chain indices, single-chain = '196'. MUST be string, not array.
+  chains: z.string(),
+  address: evmAddress(),
+  // 0: all (default), 1: tokens only, 2: DeFi only
+  assetType: z.enum(['0', '1', '2']).optional(),
+  excludeRiskToken: z.boolean().optional(),
+});
+export type BalanceTotalValueParams = z.infer<typeof BalanceTotalValueParamsSchema>;
+
+export const BalanceTotalValueSchema = z.object({
+  totalValue: z.string(),
+});
+export type BalanceTotalValue = z.infer<typeof BalanceTotalValueSchema>;
+
 export const McpJsonRpcRequestSchema = z.object({
   jsonrpc: z.literal('2.0'),
   method: z.literal('tools/call'),

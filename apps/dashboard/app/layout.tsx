@@ -2,8 +2,9 @@ import './globals.css';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Celina - x402 Economy Loop',
-  description: 'Autonomous DeFi agent earning and paying via x402 on X Layer',
+  title: 'Celina - Onchain Intelligence Agent',
+  description:
+    'Goal-directed agent that pays for onchain research via x402 on X Layer',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -14,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="mb-8 flex items-baseline gap-4">
             <h1 className="text-2xl font-bold tracking-tight">Celina</h1>
             <span className="text-sm text-neutral-400">
-              autonomous x402 economy loop on X Layer
+              onchain intelligence agent on X Layer
             </span>
           </header>
           {children}

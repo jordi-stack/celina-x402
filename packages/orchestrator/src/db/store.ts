@@ -1,5 +1,12 @@
 import type Database from 'better-sqlite3';
-import type { CycleState, PaymentStatus } from '@x402/shared';
+import type {
+  CycleState,
+  PaymentStatus,
+  ResearchCall,
+  ResearchSession,
+  ResearchSessionStatus,
+  ResearchSynthesis,
+} from '@x402/shared';
 
 export interface LoopCycleRow {
   cycle_number: number;
@@ -50,6 +57,18 @@ export interface McpCallRow {
   result: string | null;
   duration_ms: number;
   success: number;
+}
+
+export interface QuerySessionRow {
+  id: string;
+  question: string;
+  status: string;
+  calls: string;
+  total_spent: string;
+  synthesis: string | null;
+  created_at: number;
+  completed_at: number | null;
+  error: string | null;
 }
 
 export class Store {
@@ -230,4 +249,96 @@ export class Store {
       .all(opts.limit) as McpCallRow[];
     return rows.map((r) => ({ ...r, success: Boolean(r.success) }));
   }
+
+  insertQuerySession(session: ResearchSession): void {
+    this.db
+      .prepare(
+        `INSERT INTO query_sessions
+         (id, question, status, calls, total_spent, synthesis, created_at, completed_at, error)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        session.id,
+        session.question,
+        session.status,
+        JSON.stringify(session.calls),
+        session.totalSpent,
+        session.synthesis ? JSON.stringify(session.synthesis) : null,
+        session.createdAt,
+        session.completedAt,
+        session.error
+      );
+  }
+
+  updateQuerySession(
+    id: string,
+    patch: {
+      status?: ResearchSessionStatus;
+      calls?: ResearchCall[];
+      totalSpent?: string;
+      synthesis?: ResearchSynthesis | null;
+      completedAt?: number | null;
+      error?: string | null;
+    }
+  ): void {
+    const sets: string[] = [];
+    const args: unknown[] = [];
+    if (patch.status !== undefined) {
+      sets.push('status = ?');
+      args.push(patch.status);
+    }
+    if (patch.calls !== undefined) {
+      sets.push('calls = ?');
+      args.push(JSON.stringify(patch.calls));
+    }
+    if (patch.totalSpent !== undefined) {
+      sets.push('total_spent = ?');
+      args.push(patch.totalSpent);
+    }
+    if (patch.synthesis !== undefined) {
+      sets.push('synthesis = ?');
+      args.push(patch.synthesis ? JSON.stringify(patch.synthesis) : null);
+    }
+    if (patch.completedAt !== undefined) {
+      sets.push('completed_at = ?');
+      args.push(patch.completedAt);
+    }
+    if (patch.error !== undefined) {
+      sets.push('error = ?');
+      args.push(patch.error);
+    }
+    if (sets.length === 0) return;
+    args.push(id);
+    this.db
+      .prepare(`UPDATE query_sessions SET ${sets.join(', ')} WHERE id = ?`)
+      .run(...args);
+  }
+
+  getQuerySession(id: string): ResearchSession | null {
+    const row = this.db
+      .prepare(`SELECT * FROM query_sessions WHERE id = ?`)
+      .get(id) as QuerySessionRow | undefined;
+    return row ? hydrateQuerySession(row) : null;
+  }
+
+  listRecentQuerySessions(limit: number): ResearchSession[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM query_sessions ORDER BY created_at DESC LIMIT ?`)
+      .all(limit) as QuerySessionRow[];
+    return rows.map(hydrateQuerySession);
+  }
+}
+
+function hydrateQuerySession(row: QuerySessionRow): ResearchSession {
+  return {
+    id: row.id,
+    question: row.question,
+    status: row.status as ResearchSessionStatus,
+    calls: JSON.parse(row.calls) as ResearchCall[],
+    totalSpent: row.total_spent,
+    synthesis: row.synthesis ? (JSON.parse(row.synthesis) as ResearchSynthesis) : null,
+    createdAt: row.created_at,
+    completedAt: row.completed_at,
+    error: row.error,
+  };
 }

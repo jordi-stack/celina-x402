@@ -21,6 +21,8 @@ export type {
   BundleInfoResult,
 } from './trenches';
 
+export { SecurityClient } from './security';
+
 export { createWalletHistoryFetcher } from './recovery-adapter';
 export type {
   WalletHistoryEntry,
