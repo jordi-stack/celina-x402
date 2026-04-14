@@ -1,12 +1,15 @@
 import type {
   Quote,
   TokenPriceInfo,
+  TotalTokenBalances,
 } from '@x402/shared';
 import {
   QuoteSchema,
   QuoteParamsSchema,
   TokenPriceInfoSchema,
   TokenPriceInfoParamsSchema,
+  TotalTokenBalancesSchema,
+  TotalTokenBalancesParamsSchema,
   McpToolEnvelopeSchema,
 } from '@x402/shared';
 import { z } from 'zod';
@@ -138,6 +141,16 @@ export class OKXMCPClient {
       'dex-okx-market-token-price-info',
       params,
       TokenPriceInfoSchema
+    );
+  }
+
+  async getTotalTokenBalances(
+    params: z.input<typeof TotalTokenBalancesParamsSchema>
+  ): Promise<TotalTokenBalances> {
+    return this.unwrapToolResult<TotalTokenBalances>(
+      'dex-okx-balance-total-token-balances',
+      params,
+      TotalTokenBalancesSchema
     );
   }
 }

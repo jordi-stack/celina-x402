@@ -3,6 +3,7 @@
 import { useSseEvents } from '@/lib/useSseEvents';
 import { LoopStatusCard } from '@/components/LoopStatusCard';
 import { BalanceDisplay } from '@/components/BalanceDisplay';
+import { BalanceCard } from '@/components/BalanceCard';
 import { EventFeed } from '@/components/EventFeed';
 
 export default function HomePage() {
@@ -10,6 +11,7 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
+      <BalanceCard />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <LoopStatusCard events={events} />
         <BalanceDisplay events={events} />

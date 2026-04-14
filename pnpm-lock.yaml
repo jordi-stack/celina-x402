@@ -57,6 +57,9 @@ importers:
 
   apps/dashboard:
     dependencies:
+      '@x402/mcp-client':
+        specifier: workspace:*
+        version: link:../../packages/mcp-client
       '@x402/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator

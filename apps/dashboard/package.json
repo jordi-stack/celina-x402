@@ -13,6 +13,7 @@
   "dependencies": {
     "@x402/shared": "workspace:*",
     "@x402/orchestrator": "workspace:*",
+    "@x402/mcp-client": "workspace:*",
     "better-sqlite3": "^11.3.0",
     "clsx": "^2.1.1",
     "next": "^14.2.15",

@@ -105,6 +105,37 @@ export const TokenPriceInfoSchema = z.object({
 });
 export type TokenPriceInfo = z.infer<typeof TokenPriceInfoSchema>;
 
+// dex-okx-balance-total-token-balances params: `chains` must be a single
+// string, NOT an array (array gives error 50014 "chains is invalid").
+// Confirmed via Move 1 balance spike.
+export const TotalTokenBalancesParamsSchema = z.object({
+  chains: z.string(),
+  address: evmAddress(),
+});
+export type TotalTokenBalancesParams = z.infer<typeof TotalTokenBalancesParamsSchema>;
+
+// Individual token row returned by dex-okx-balance-total-token-balances.
+// Shape captured live via Move 1 balance spike against X Layer (chain 196).
+// `balance` is already in decimal form; `rawBalance` is the uint minimal-unit string.
+export const TokenAssetSchema = z.object({
+  chainIndex: z.string(),
+  symbol: z.string(),
+  balance: z.string(),
+  tokenPrice: z.string(),
+  isRiskToken: z.boolean(),
+  rawBalance: z.string(),
+  address: z.string(),
+  tokenContractAddress: z.string(),
+});
+export type TokenAsset = z.infer<typeof TokenAssetSchema>;
+
+// data[0] envelope for total-token-balances: one object containing a
+// tokenAssets array across the queried chain(s).
+export const TotalTokenBalancesSchema = z.object({
+  tokenAssets: z.array(TokenAssetSchema),
+});
+export type TotalTokenBalances = z.infer<typeof TotalTokenBalancesSchema>;
+
 export const McpJsonRpcRequestSchema = z.object({
   jsonrpc: z.literal('2.0'),
   method: z.literal('tools/call'),
