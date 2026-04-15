@@ -53,6 +53,7 @@ POLICY:
 - If the question is about who is moving a token / recent activity: start with signal-whale-watch.
 - If the question is about a brand new launch's potential: start with signal-new-token-scout.
 - Prefer 1-3 service calls total. Synthesize as soon as the answer is clear. Never loop.
+- The user payload contains a BLOCKED_DO_NOT_CALL_AGAIN list. Never call any (service, args) combination that appears there. If all useful services are blocked, synthesize with what you have.
 - If the question has no extractable address and asks about "a token" vaguely, abort with a helpful reason.
 
 CONFIDENCE:
@@ -64,6 +65,16 @@ REASON:
 You MUST call the plan_next_step tool. Do not write prose.`;
 
 export function buildPlanUserPrompt(ctx: PlanStepContext): string {
+  // Build the set of (service, args) pairs already called so we can tell
+  // the LLM exactly which combinations are off-limits. The LLM often ignores
+  // a soft "do not repeat" instruction; an explicit blocklist in the payload
+  // is more effective.
+  const alreadyCalled = ctx.calls.map((c) => ({
+    service: c.service,
+    argsKey: JSON.stringify(c.args),
+  }));
+  const blockedCombos = alreadyCalled.map((x) => `${x.service}(${x.argsKey})`);
+
   const payload: Record<string, unknown> = {
     question: ctx.question,
     callsSoFar: ctx.calls.map((c) => ({
@@ -75,6 +86,7 @@ export function buildPlanUserPrompt(ctx: PlanStepContext): string {
       planConfidence: c.planConfidence,
       dataPreview: summarize(c.data),
     })),
+    BLOCKED_DO_NOT_CALL_AGAIN: blockedCombos,
     totalSpentUsdg: ctx.totalSpent,
     budgetUsdg: ctx.budgetUsdg,
     callsRemaining: Math.max(0, ctx.maxCalls - ctx.calls.length),
