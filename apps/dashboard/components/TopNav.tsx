@@ -66,7 +66,7 @@ export function TopNav() {
           </span>
         </div>
         <span className="text-sm text-neutral-400 italic">
-          I ask the blockchain. It pays itself to answer.
+          x402 agentic payments · X Layer · uses USDG per research call
         </span>
       </div>
 
