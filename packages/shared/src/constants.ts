@@ -106,7 +106,7 @@ export const RESEARCH_SERVICE_CATALOG = {
     priceMinimal: '20000',
     priceUsdg: '0.020',
     summary:
-      'Execute a real DEX swap on X Layer via OKX aggregator (routes through Uniswap V4 + Revoswap for best price). Provide fromToken + toToken contract addresses and readableAmount (e.g. "0.005"). Returns txHash and execution route. Only use when the user explicitly asks to execute a trade.',
+      'Execute a real DEX swap on X Layer via the OKX DEX aggregator, which routes across the best available liquidity pools on X Layer for price. Provide fromToken + toToken contract addresses and readableAmount (e.g. "0.005"). Returns txHash and execution route. Only use when the user explicitly asks to execute a trade.',
     argsHint: '{ fromToken: 0x..., toToken: 0x..., readableAmount: "0.005" }',
   },
 } as const;

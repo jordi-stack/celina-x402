@@ -25,17 +25,17 @@ The caller pays nothing. Celina's Consumer wallet pays the Producer on each rese
 
 ## Available services
 
-Each service is an x402-gated HTTP endpoint on the Producer (`:3001`). Celina's LLM planner selects services automatically, but any x402-capable caller can hit them directly.
+Each service is an x402-gated HTTP endpoint. Six live on the Producer (`:3001`); one lives on the Sub-agent (`:3003`) as an agent-to-agent composed call. Celina's LLM planner selects services automatically, but any x402-capable caller can hit them directly.
 
-| Service | Route | Price | Input | What it returns |
-|---|---|---|---|---|
-| `research-token-report` | `POST /research/token-report` | 0.015 USDG | `{ tokenAddress }` | Risk + fundamentals: security flags, dev history, holder concentration, price |
-| `research-wallet-risk` | `POST /research/wallet-risk` | 0.010 USDG | `{ address }` | Wallet health: portfolio value, risky tokens, dangerous approvals |
-| `research-liquidity-health` | `POST /research/liquidity-health` | 0.008 USDG | `{ tokenAddress }` | Slippage curve at 10/100/1000 USDG + 24h volatility range |
-| `signal-whale-watch` | `POST /signal/whale-watch` | 0.005 USDG | `{ tokenAddress }` | Whale trade sentiment: buy/sell pressure from wallets above $1000 |
-| `signal-new-token-scout` | `POST /signal/new-token-scout` | 0.003 USDG | `{ tokenAddress }` | Launch momentum + rug-check for new tokens |
-| `research-deep-dive` | `POST /research/deep-dive` | 0.030 USDG | `{ tokenAddress }` | Agent-to-agent composed analysis: Sub-agent pays Producer for token-report + liquidity-health and correlates results |
-| `action-swap-exec` | `POST /action/swap-exec` | 0.020 USDG | `{ fromToken, toToken, readableAmount }` | Execute a real DEX swap on X Layer via OKX aggregator |
+| Service | Host | Route | Price | Input | What it returns |
+|---|---|---|---|---|---|
+| `research-token-report` | Producer `:3001` | `POST /research/token-report` | 0.015 USDG | `{ tokenAddress }` | Risk + fundamentals: security flags, dev history, holder concentration, price |
+| `research-wallet-risk` | Producer `:3001` | `POST /research/wallet-risk` | 0.010 USDG | `{ address }` | Wallet health: portfolio value, risky tokens, dangerous approvals |
+| `research-liquidity-health` | Producer `:3001` | `POST /research/liquidity-health` | 0.008 USDG | `{ tokenAddress }` | Slippage curve at 10/100/1000 USDG + 24h volatility range |
+| `signal-whale-watch` | Producer `:3001` | `POST /signal/whale-watch` | 0.005 USDG | `{ tokenAddress }` | Whale trade sentiment: buy/sell pressure from wallets above $1000 |
+| `signal-new-token-scout` | Producer `:3001` | `POST /signal/new-token-scout` | 0.003 USDG | `{ tokenAddress }` | Launch momentum + rug-check for new tokens |
+| `action-swap-exec` | Producer `:3001` | `POST /action/swap-exec` | 0.020 USDG | `{ fromToken, toToken, readableAmount }` | Execute a real DEX swap on X Layer via the OKX aggregator |
+| `research-deep-dive` | **Sub-agent `:3003`** | `POST /research/deep-dive` | 0.030 USDG | `{ tokenAddress }` | Agent-to-agent composed analysis: Sub-agent pays the Producer for token-report + liquidity-health, correlates the results, returns a combined verdict |
 
 ## Payment details
 
@@ -47,12 +47,14 @@ facilitator:      https://web3.okx.com/api/v6/pay/x402
 protocol:         x402 v2
 ```
 
-To call a Producer route from outside Celina:
+To call any service route from outside Celina (both Producer and Sub-agent routes use the same protocol):
 
-1. `POST /research/<name>` — expect `402 + PAYMENT-REQUIRED` header (base64-encoded x402 v2 challenge).
+1. `POST` the route URL — expect `402 + PAYMENT-REQUIRED` header (base64-encoded x402 v2 challenge).
 2. Sign via `onchainos payment x402-pay` or any EIP-3009-compatible signer.
 3. Replay the same `POST` with `PAYMENT-SIGNATURE: <base64-proof>`.
 4. On success, receive `200 + { service, data, servedAt }`.
+
+Note: calling `research-deep-dive` on the Sub-agent triggers two additional x402 settlements because the Sub-agent itself pays the Producer for its two upstream research inputs. A single deep-dive call yields three on-chain USDG transfers total.
 
 ## Attestation
 
@@ -82,7 +84,7 @@ Celina caches completed session verdicts in a 24-hour rolling window. On a new q
 |---|---|
 | Consumer (buyer) | `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25` |
 | Producer (seller) | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc` |
-| Sub-agent | separate wallet, pays Producer under Account 3 |
+| Sub-agent | separate wallet under Account 3. Hosts `research-deep-dive` on `:3003`, receives x402 payments from the Consumer, and pays the Producer under its own account for upstream research inputs. Address is configured via `SUBAGENT_ADDRESS` in `.env`. |
 
 ## Session response shape
 

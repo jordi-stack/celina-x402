@@ -1,3 +1,20 @@
+# Celina stack via Docker Compose.
+#
+# PRECONDITIONS ON THE HOST:
+#   1. `onchainos` CLI installed at ${HOME}/.local/bin/onchainos (the standard
+#      path used by the OKX Developer Portal installer).
+#   2. `onchainos wallet login` has already run on the host, so the TEE keyring
+#      + account list live in ${HOME}/.onchainos/. This directory is mounted
+#      read-only into the signing containers; they reuse the host's wallet
+#      state rather than re-authenticating inside the container.
+#   3. `.env` at the repo root is populated (OKX_*, GROQ_API_KEY,
+#      CONSUMER_*, PRODUCER_*, SUBAGENT_*).
+#   4. All three accounts are funded on X Layer: Consumer 5-10 USDG,
+#      Sub-agent ~1 USDG, Producer 0 USDG (it only receives).
+#
+# The Dashboard container does not mount the onchainos binary because it only
+# reads the shared SQLite file and calls the OKX MCP server for balances.
+
 services:
   producer:
     build:
@@ -10,6 +27,8 @@ services:
       APP_DB_PATH: /app/data/app.db
     volumes:
       - db_data:/app/data
+      - ${HOME}/.local/bin/onchainos:/usr/local/bin/onchainos:ro
+      - ${HOME}/.onchainos:/root/.onchainos
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -30,6 +49,8 @@ services:
       PRODUCER_URL: http://producer:3001
     volumes:
       - db_data:/app/data
+      - ${HOME}/.local/bin/onchainos:/usr/local/bin/onchainos:ro
+      - ${HOME}/.onchainos:/root/.onchainos
     depends_on:
       producer:
         condition: service_healthy
@@ -55,6 +76,8 @@ services:
     volumes:
       - db_data:/app/data
       - transformers_cache:/app/.transformers-cache
+      - ${HOME}/.local/bin/onchainos:/usr/local/bin/onchainos:ro
+      - ${HOME}/.onchainos:/root/.onchainos
     depends_on:
       producer:
         condition: service_healthy

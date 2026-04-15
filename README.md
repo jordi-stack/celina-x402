@@ -2,6 +2,8 @@
 
 Celina is an onchain research agent on X Layer. You ask it a question about a token, a wallet, or a market situation, and it pays for the answer. Every paid call is a real x402 HTTP micropayment settled in USDG on X Layer chain 196. Zero gas because USDG transfers on X Layer cost nothing.
 
+Submitted to the OKX Build X hackathon, X Layer Arena track (I'm Human subcategory).
+
 ## What it does
 
 Type a question like "is 0x4ae4...d2dc8 a safe token to buy?" into the dashboard. Celina parses the question, picks one of seven paid research services, signs an x402 payment proof via the OKX Agentic Wallet, replays the HTTP request with the proof, reads the paywalled data, and decides whether it needs another call. When it has enough evidence it synthesizes a verdict with a confidence score, a short list of key facts, and an on-chain attestation anchored to `CelinaAttestation.sol`.
@@ -15,7 +17,7 @@ Celina's onchain identity is an **OKX Agentic Wallet** created through the `onch
 | Agent | Account ID (Agentic Wallet) | X Layer address | Role |
 |---|---|---|---|
 | Consumer | `c90a20ab-d544-47e6-b227-0c259e0db291` | `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25` | The intelligence agent. Holds USDG, plans research steps with Groq, signs x402 proofs, replays paid HTTP requests, synthesizes verdicts, and anchors each verdict to `CelinaAttestation.sol`. |
-| Producer | `a782c10a-0678-4164-8419-2085797410d6` | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc` | The research service host. Exposes 7 paid routes behind x402 paywalls, queries OnchainOS modules, collects USDG. |
+| Producer | `a782c10a-0678-4164-8419-2085797410d6` | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc` | The research service host. Exposes 6 paid routes behind x402 paywalls (5 research/signal + 1 real DEX swap), queries OnchainOS modules, collects USDG. |
 | Sub-agent | `SUBAGENT_ACCOUNT_ID` in `.env` | `SUBAGENT_ADDRESS` in `.env` | A third account that hosts the `research-deep-dive` composed service on `:3003`. Consumer pays the Sub-agent via x402; the Sub-agent then pays the Producer via x402 for `research-token-report` + `research-liquidity-health` and correlates the two reports into one verdict. This is the agent-to-agent x402 chain: Consumer → Sub-agent → Producer, two independent wallet-to-wallet settlements inside one user request. |
 
 All three roles live under one AK login so credentials stay minimal and all three agent addresses can be audited as one economic unit on OKLink. No private key ever enters application memory; every signature goes through the `onchainos` CLI, which keeps keys inside the wallet's TEE.
@@ -79,7 +81,7 @@ sequenceDiagram
     end
 ```
 
-All three processes (Producer, Consumer, Dashboard) resolve `data/app.db` to the same absolute path, so the Producer's settlement write is visible to the Consumer's payment poll and to the Dashboard's session list without any IPC layer. SQLite runs in WAL mode for concurrent reads.
+All four processes (Producer, Consumer, Sub-agent, Dashboard) resolve `data/app.db` to the same absolute path, so the Producer's settlement write is visible to the Consumer's payment poll and to the Dashboard's session list without any IPC layer. Producer, Consumer, and Sub-agent all write to the DB; the Dashboard only reads. SQLite runs in WAL mode for concurrent reads.
 
 The Consumer session runner lives in [`apps/consumer/src/agent/session-runner.ts`](apps/consumer/src/agent/session-runner.ts). It hard-caps calls per session (default 4), writes every state transition to `query_sessions` so the dashboard can show live progress, and gracefully synthesizes from partial data if the Groq planner errors mid-session after at least one paid call has settled. A flaky LLM never wastes a paid call.
 
@@ -90,14 +92,14 @@ After each completed session the runner does three additional things: anchors th
 ```
 x402-earn-pay-earn/
   apps/
-    producer/         Fastify :3001, x402-gate plugin, 7 paid research routes
+    producer/         Fastify :3001, x402-gate plugin, 6 paid routes (5 research/signal + action-swap-exec)
     consumer/         Fastify :3002, /ask server, session runner, Groq reasoner, memory/dedup
-    subagent/         Fastify :3003, composed deep-dive service that pays Producer via x402
+    subagent/         Fastify :3003, research-deep-dive composed service that pays Producer via x402
     dashboard/        Next.js 14 App Router: AskBox, ReportCard, /tx, /mcp, /learning, /compare, /memory
   packages/
     shared/           TypeScript types, constants, Zod schemas for MCP + x402 + research
     okx-auth/         HMAC-SHA256 signer for Facilitator REST auth
-    orchestrator/     SQLite store (query_sessions, payments, mcp_calls, session_memory, service_performance), event bus
+    orchestrator/     SQLite store + event bus. Principal tables: query_sessions, payments, mcp_calls, session_memory, service_performance, audit_events, mcp_result_cache
     mcp-client/       OKX MCP JSON-RPC client with envelope unwrapping
     onchain-clients/  Typed wrappers for onchainos CLI (wallet, x402-payment, trenches, security, attestation)
     x402-server/      Reusable Fastify x402-gate plugin (shared by Producer and Sub-agent)
@@ -183,7 +185,7 @@ Seven paid services are available. Six live on the Producer (`:3001`): the five 
 | [`research-liquidity-health`](apps/producer/src/routes/research-liquidity-health.ts) | `POST /research/liquidity-health` | 0.008 USDG | `{ "tokenAddress": "0x..." }` | Slippage curve from probing the OKX DEX aggregator at 10 / 100 / 1000 USDG sell sizes, plus a 24-hour 1H candlestick volatility range. Verdict `deep` / `thin` / `fragile`. |
 | [`signal-whale-watch`](apps/producer/src/routes/signal-whale-watch.ts) | `POST /signal/whale-watch` | 0.005 USDG | `{ "tokenAddress": "0x..." }` | Whale activity in the last 100 trades. Filters for entries above $1,000 USD, computes whale buy vs sell volume balance, cross-references each whale wallet against the top-50 holder list. Sentiment `accumulating` / `distributing` / `neutral`. |
 | [`signal-new-token-scout`](apps/producer/src/routes/signal-new-token-scout.ts) | `POST /signal/new-token-scout` | 0.003 USDG | `{ "tokenAddress": "0x..." }` | Momentum + safety score for a young launch. 60 minutes of 1m candles, 24h / 4h / 1h price changes, hourly tx count, offset by dev rug-pull count, bundle launch detection, sniper count, and 6 blocking security flags from the Security tokenScan. Verdict `promising` / `mixed` / `skip`. |
-| [`research-deep-dive`](apps/subagent/src/routes/) | `POST /research/deep-dive` | 0.030 USDG | `{ "tokenAddress": "0x..." }` | **Agent-to-agent composed analysis.** The Sub-agent (Account 3) pays the Producer via x402 for `research-token-report` + `research-liquidity-health`, then correlates the two reports into a single deep-dive verdict. Consumer → Sub-agent → Producer is a three-hop x402 chain where two separate agent wallets settle on-chain. |
+| [`research-deep-dive`](apps/subagent/src/routes/research-deep-dive.ts) (hosted on Sub-agent `:3003`) | `POST /research/deep-dive` | 0.030 USDG | `{ "tokenAddress": "0x..." }` | **Agent-to-agent composed analysis.** The Sub-agent (Account 3) pays the Producer via x402 for `research-token-report` + `research-liquidity-health` in parallel, then correlates the two reports into a single deep-dive verdict. One deep-dive request settles three on-chain USDG transfers: Consumer → Sub-agent once, then Sub-agent → Producer twice. |
 | [`action-swap-exec`](apps/producer/src/routes/action-swap-exec.ts) | `POST /action/swap-exec` | 0.020 USDG | `{ "fromToken": "0x...", "toToken": "0x...", "readableAmount": "0.005" }` | **Real DEX swap** on X Layer via the OKX aggregator (routes through available liquidity pools for best price). Returns the execution tx hash and route details. The planner only picks this service when the user explicitly asks to execute a trade. |
 
 ### Request and response shape
@@ -298,7 +300,7 @@ Four terminals (or use Docker Compose, see below):
 
 ```bash
 # Terminal 1
-pnpm dev:producer      # Fastify :3001 — 7 paid research routes
+pnpm dev:producer      # Fastify :3001 — 6 paid routes (5 research/signal + action-swap-exec)
 
 # Terminal 2
 pnpm dev:subagent      # Fastify :3003 — agent-to-agent deep-dive
@@ -324,11 +326,19 @@ A machine-readable capability manifest is exposed at `GET /capabilities` on the 
 
 ### Docker Compose
 
+The compose stack builds and runs all four services in one command, but it depends on the host already having the OKX Agentic Wallet set up, because the `onchainos` CLI binary and the TEE-backed wallet state both live outside the container:
+
 ```bash
+# Host preconditions:
+#   onchainos CLI at ~/.local/bin/onchainos (installed from OKX Dev Portal)
+#   onchainos wallet login already run (~/.onchainos populated)
+#   .env filled with OKX_*, GROQ_API_KEY, CONSUMER_*, PRODUCER_*, SUBAGENT_*
+#   Three accounts funded: Consumer 5-10 USDG, Sub-agent ~1 USDG
 cp .env.example .env
-# Fill all required vars (OKX_*, GROQ_API_KEY, CONSUMER_*, PRODUCER_*, SUBAGENT_*)
 docker compose up --build
 ```
+
+The compose file mounts `${HOME}/.local/bin/onchainos` and `${HOME}/.onchainos` into the Producer, Consumer, and Sub-agent containers so they reuse the host's wallet keyring instead of re-authenticating. The Dashboard container does not need the CLI — it only reads the shared SQLite file and calls the OKX MCP server for balance data.
 
 All four services start with health checks and a shared `db_data` volume for the SQLite file. The Consumer's `transformers_cache` volume persists the `all-MiniLM-L6-v2` model weights (~22 MB downloaded on first embed call).
 
@@ -352,7 +362,7 @@ Celina is a solo build.
 X Layer is OKX's L2. The ecosystem needs real agents that move money on their own, visible on-chain activity, and apps that use the OnchainOS + USDG rail OKX built this year. Celina is shaped to score on all three.
 
 - **A goal the user can express in plain English.** Celina takes natural-language questions, lets a Groq LLM plan which paid services to call, and surfaces the full trace. You can feel the LLM spending money to answer you.
-- **Agent-to-agent x402.** The `research-deep-dive` service triggers a second agent (the Sub-agent, Account 3) that pays the Producer for two raw services and correlates them. Three agent wallets settle on-chain in one user request — a live demonstration of x402 as a machine-to-machine payment layer.
+- **Agent-to-agent x402.** The `research-deep-dive` service triggers a second agent (the Sub-agent, Account 3) that pays the Producer for two raw services and correlates them. One deep-dive settles three on-chain USDG transfers across three agent wallets (Consumer → Sub-agent once, Sub-agent → Producer twice) — a live demonstration of x402 as a machine-to-machine payment layer.
 - **On-chain attestation.** Every synthesized verdict is hashed and anchored to `CelinaAttestation.sol` on X Layer. OKLink changes from "USDG transfers" to "verified research verdicts". Any verifier can confirm a verdict without trusting Celina.
 - **Real DEX execution.** The `action-swap-exec` service runs an actual swap on X Layer via the OKX DEX aggregator — not a quote, a real on-chain trade.
 - **Memory + self-improvement.** Completed sessions are embedded with `all-MiniLM-L6-v2` and cached for 24 hours. Similar questions hit the cache at zero cost. After each session the LLM grades each paid call 0–1 for usefulness; the planner biases toward high-scoring services in future sessions.

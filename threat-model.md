@@ -1,6 +1,6 @@
 # Threat Model: Celina x402 Onchain Intelligence Agent
 
-This document covers the principal threat scenarios for Celina's three-process architecture (Producer, Consumer, Dashboard) and how each is mitigated. The goal is to let a judge or security reviewer understand what Celina trusts, what it does not, and where the residual risk lies.
+This document covers the principal threat scenarios for Celina's four-process architecture (Producer, Consumer, Sub-agent, Dashboard) and how each is mitigated. The goal is to let a judge or security reviewer understand what Celina trusts, what it does not, and where the residual risk lies.
 
 ## System boundary
 
@@ -12,19 +12,25 @@ Dashboard (Next.js :3000)  ─── API routes ──► Consumer (:3002)
                                                     │
                                               Groq LLM (HTTPS)
                                                     │
-                                              Producer (:3001)
-                                                    │
-                                    ┌───────────────┼───────────────┐
-                                OKX MCP           Security       Trenches
-                                Server             module          module
-                                    └───────────────┴───────────────┘
-                                              OKX Facilitator
-                                              (verify + settle)
+                         ┌──────────────────────────┴──────────────────────────┐
+                         ▼                                                     ▼
+                   Producer (:3001)                                  Sub-agent (:3003)
+                         │                                                     │
+                         │◄──── x402 payment (Sub-agent pays Producer) ────────┤
+                         │                                                     │
+             ┌───────────┼───────────┐                                         │
+         OKX MCP       Security   Trenches                                     │
+         Server        module     module                                       │
+             └───────────┴───────────┘                                         │
+                         │                                                     │
+                         └─────────────►  OKX Facilitator  ◄───────────────────┘
+                                          (verify + settle)
                                                     │
                                            X Layer chain 196
+                                     + CelinaAttestation.sol
 ```
 
-Shared state: one SQLite file (`data/app.db`, WAL mode). All three processes open it read/write.
+Shared state: one SQLite file (`data/app.db`, WAL mode). All four processes open it — Producer, Consumer, and Sub-agent write; Dashboard reads.
 
 ---
 
@@ -42,17 +48,17 @@ Shared state: one SQLite file (`data/app.db`, WAL mode). All three processes ope
 
 ---
 
-## Threat 2 — Consumer wallet key leaked
+## Threat 2 — Consumer or Sub-agent wallet key leaked
 
-**Scenario.** An attacker obtains the OKX API key and passphrase from the `.env` file (e.g., via a misconfigured server, a leaked git commit, or process memory access).
+**Scenario.** An attacker obtains the OKX API key and passphrase from the `.env` file (e.g., via a misconfigured server, a leaked git commit, or process memory access). The same scenario applies to the Sub-agent's wallet state, which lives under the same AK login.
 
 **How Celina handles it.**
 - No private key ever enters application memory. All signing goes through the `onchainos` CLI, which keeps keys inside the OKX Agentic Wallet's TEE. Leaking the API key/passphrase from `.env` gives an attacker the ability to call `onchainos wallet` commands, not to exfiltrate raw key material.
 - The `.env` file is `.gitignore`-d. The project git history was scrubbed via `git filter-repo` after an early API key briefly appeared in a spike findings file.
-- The Consumer has a per-session budget cap (`SESSION_BUDGET_USDG`, default 0.10 USDG) and a call-count cap (`MAX_CALLS_PER_SESSION`, default 4). Even if an attacker can trigger `/ask` calls, each session is bounded, and the total balance in the Consumer wallet is limited to the demo float (typically 1–5 USDG).
+- The Consumer has a hard call-count cap (`MAX_CALLS_PER_SESSION`, default 4) enforced inside `session-runner.ts`. A `SESSION_BUDGET_USDG` value (default 0.10 USDG) is also passed to the Groq planner as a prompt hint so the LLM can avoid over-spending, but it is advisory, not runtime-enforced. The hard cap is the call count plus the total float in the wallet (typically 1–5 USDG for the demo, ~1 USDG for the Sub-agent).
 - The attacker cannot replay a signed `transferWithAuthorization` because the OKX Facilitator enforces nonce uniqueness: each payment proof's nonce must be fresh and unused. A captured proof cannot be submitted twice.
 
-**Residual risk.** An attacker with the API key and CLI access on the same machine could call `onchainos payment x402-pay` to drain the Consumer balance up to the float ceiling. Mitigation: run the Consumer in a dedicated VM or container with network egress limited to the Producer URL and OKX endpoints. Rotate the API key if the host is compromised.
+**Residual risk.** An attacker with the API key and CLI access on the same machine could call `onchainos payment x402-pay` to drain the Consumer or Sub-agent balance up to the float ceiling, limited only by the 4-call cap per session and the total balance. Mitigation: run each agent in a dedicated VM or container with network egress limited to the known upstream URLs and OKX endpoints. Rotate the API key if the host is compromised.
 
 ---
 
@@ -87,25 +93,26 @@ Shared state: one SQLite file (`data/app.db`, WAL mode). All three processes ope
 **Scenario.** The Next.js dashboard is publicly accessible and leaks wallet balances, session history, or API keys to unauthorized viewers.
 
 **How Celina handles it.**
-- The dashboard is read-only. No route on it can trigger a payment or session start (those go to the Consumer's Fastify server on port 3002, which is not exposed to the public internet).
-- The `/api/live-balance` route returns only the USDG and USDT balances of the Consumer wallet address — already public on-chain. It does not expose the account ID or API key.
-- API keys (`OKX_API_KEY`, `GROQ_API_KEY`, etc.) are loaded by the Producer and Consumer processes via `dotenv` at startup and never forwarded to the Dashboard. The Dashboard's Next.js API routes do not import `config.ts` from the Consumer or Producer packages.
-- The dashboard `.env` is a symlink to the repo-root `.env` but Next.js only exposes variables prefixed with `NEXT_PUBLIC_` to the browser bundle. None of the variables in `.env.example` use that prefix.
+- The dashboard is mostly read-only. The user-facing AskBox posts to the Dashboard's own `/api/ask` route which proxies to the Consumer, but no route directly mutates payment state — all USDG transfers are driven by the session runner inside the Consumer.
+- The `/api/live-balance` route returns only the USDG balance of the Consumer and Producer wallet addresses. Those addresses are already public on-chain; the account IDs (UUIDs issued by the OKX Agentic Wallet) are never returned to the browser.
+- The Dashboard's Next.js API routes run server-side only. `OKX_API_KEY` is loaded into the Dashboard process via the symlinked `apps/dashboard/.env` file and used inside `/api/live-balance` to call the OKX MCP Server, but it is never exposed to the browser bundle — Next.js only ships variables prefixed with `NEXT_PUBLIC_` to the client, and none of the OKX or Groq keys use that prefix. Any request from a browser that touches `OKX_API_KEY` is executed server-side in the Next.js runtime.
+- `GROQ_API_KEY` is not touched by the Dashboard at all; it only lives inside the Consumer process.
 
-**Residual risk.** If the dashboard is deployed on a public host, session verdicts and wallet addresses are visible to anyone with the URL. This is intentional for the demo (judge visibility), but production use would require authentication middleware.
+**Residual risk.** If the dashboard is deployed on a public host, session verdicts and wallet addresses are visible to anyone with the URL, and the Dashboard process carries `OKX_API_KEY` in its runtime env. A compromised Dashboard host leaks the same key that the Producer and Consumer hold. Production deployments should put the Dashboard behind authentication middleware and, if strict isolation is required, split the balance lookup into a Consumer-side endpoint so the Dashboard never needs `OKX_API_KEY` at all.
 
 ---
 
-## Threat 6 — On-chain attestation manipulated
+## Threat 6 — On-chain attestation impersonation
 
-**Scenario.** An attacker submits a false `attest()` call to `CelinaAttestation.sol` to forge a verdict anchored to Celina's Consumer address.
+**Scenario.** `CelinaAttestation.sol` has no owner check: anyone with gas on X Layer can call `attest(sessionHash, verdictHash, verdict)`. An attacker could try to front-run Celina's own attestation for a known session id, or try to attest a fake verdict under an unknown session id in a way that looks like it came from Celina.
 
 **How Celina handles it.**
-- `CelinaAttestation.sol` is a single-owner registry: only the deployer address (Consumer `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25`) can write attestations via `attest()`. Any call from a different address reverts with `NotOwner`.
-- The `verdictHash` stored on-chain is `keccak256(canonicalJson)` where `canonicalJson` is deterministically serialized from the session data. A reviewer can recompute the hash from the verdict text and confirm it matches the on-chain record.
-- The Consumer signs the canonical payload before calling `attest()`. The `signature` field in `session.attestation` lets any verifier confirm the Consumer wallet signed that exact payload.
+- The contract is intentionally permissionless but write-once per `sessionHash`. The first caller wins: a second `attest()` with the same session hash reverts with `AlreadyAttested(sessionHash)` ([packages/contracts/src/CelinaAttestation.sol](packages/contracts/src/CelinaAttestation.sol)). To impersonate a specific Celina session, an attacker would have to predict `keccak256(session.id)` before Celina completes that session, where `session.id` is a random `q_<uuidv4>` generated client-side at the start of each `/ask` call. Guessing a UUID v4 is 2^122 work.
+- Every attestation records `msg.sender` as the `attester` field and emits it in the `Attested` event. A verifier checks the on-chain row against the Consumer's known address (`0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25`); any attestation from a different address is not Celina's. The `/verify/:sessionHash` endpoint on the Consumer API surfaces this field directly.
+- The `verdictHash` stored on-chain is `keccak256(canonicalJson)`, where `canonicalJson` is deterministically serialized from the session data via `canonicalStringify` in `@x402/shared`. A reviewer can recompute the hash from the verdict text and confirm it matches the on-chain record.
+- Before attesting, the Consumer also signs the canonical payload with `onchainos wallet sign-message --type personal` and stores the signature in `session.attestation.signature`. This gives a second verification path: recover the signer from the signature, compare against the on-chain `attester`, confirm they match.
 
-**Residual risk.** The Consumer's OKX Agentic Wallet controls the private key that owns the contract. If the Consumer key is compromised (see Threat 2), an attacker could submit false attestations. Key rotation would require redeploying the contract with a new owner.
+**Residual risk.** If Celina's session id generator ever becomes predictable (e.g., a weak RNG swap), the front-running attack becomes cheap. If the Consumer key is compromised (see Threat 2) an attacker can publish valid-looking attestations under Celina's address; only off-chain controls (rotating the Consumer key and republishing its canonical address) can recover from that. The contract itself has no admin; a breach would require deploying a new contract and updating `CELINA_ATTESTATION_ADDRESS` in `.env`.
 
 ---
 
@@ -114,8 +121,8 @@ Shared state: one SQLite file (`data/app.db`, WAL mode). All three processes ope
 | Threat | Mitigation | Residual |
 |---|---|---|
 | Malicious Producer | Payment flow independent of data; contradiction detection; call grading | Producer can serve stale/fake data |
-| Consumer key leaked | Keys in TEE; session budget cap; nonce uniqueness | CLI access on same host could drain float |
+| Consumer / Sub-agent key leaked | Keys in TEE; 4-call hard cap per session; nonce uniqueness | CLI access on same host could drain float up to cap |
 | MCP prompt injection | Zod schema stripping; data-vs-instruction prompt separation | LLM verdict text not output-validated |
 | Replay / double-spend | Facilitator nonce enforcement; expiry window | Wide `validUntil` windows (OKX's scope) |
-| Dashboard data exposure | Read-only; no API keys to browser; session data intentionally public for demo | Auth required for production |
-| Attestation forgery | Owner-only contract; canonical hash; Consumer signature | Compromise of Consumer key |
+| Dashboard data exposure | Server-side only; session data intentionally public for demo; `OKX_API_KEY` never in browser bundle | `OKX_API_KEY` still lives in Dashboard runtime env |
+| Attestation impersonation | Write-once per session hash; attester = `msg.sender`; off-chain signature cross-check | Compromise of Consumer key; session id RNG weakness |
