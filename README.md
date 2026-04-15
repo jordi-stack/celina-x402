@@ -1,5 +1,7 @@
 # Celina - x402 Onchain Intelligence Agent
 
+**Live demo**: [celina-x402.xyz](https://celina-x402.xyz) · **Video walkthrough**: [youtu.be/hDm47HVHSMQ](https://youtu.be/hDm47HVHSMQ)
+
 Celina is an onchain research agent on X Layer. You ask it a question about a token, a wallet, or a market situation, and it pays for the answer. Every paid call is a real x402 HTTP micropayment settled in USDG on X Layer chain 196. Zero gas because USDG transfers on X Layer cost nothing.
 
 Submitted to the OKX Build X hackathon, X Layer Arena track (I'm Human subcategory).
