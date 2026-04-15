@@ -20,23 +20,23 @@ export function EventFeed({ events }: Props) {
   const recent = [...events].reverse().slice(0, 30);
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+    <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-6">
       <div className="text-sm uppercase tracking-wide text-neutral-400 mb-4">
         Live Event Feed
       </div>
       <div className="space-y-1 font-mono text-xs">
         {recent.length === 0 && (
-          <div className="text-neutral-600">No events yet. Start the loop.</div>
+          <div className="text-neutral-500">No events yet. Start the loop.</div>
         )}
         {recent.map((event) => (
           <div key={event.id} className="flex gap-3">
-            <span className="text-neutral-600">
+            <span className="text-neutral-500">
               {new Date(event.timestamp).toLocaleTimeString()}
             </span>
             <span className={KIND_COLOR[event.kind] ?? 'text-neutral-300'}>
               {event.kind}
             </span>
-            <span className="text-neutral-500">
+            <span className="text-neutral-400">
               #{event.cycleNumber ?? '-'}
             </span>
           </div>

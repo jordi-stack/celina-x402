@@ -6,6 +6,8 @@ import { AskBox } from '@/components/AskBox';
 import { ReportCard } from '@/components/ReportCard';
 import { SessionHistory } from '@/components/SessionHistory';
 import { BalanceCard } from '@/components/BalanceCard';
+import { LiveStats } from '@/components/LiveStats';
+import { EventStream } from '@/components/EventStream';
 
 export default function HomePage() {
   const [activeSession, setActiveSession] = useState<ResearchSession | null>(null);
@@ -15,6 +17,13 @@ export default function HomePage() {
     setRefreshToken((n) => n + 1);
   };
 
+  // Called by AskBox on every poll tick during a live session. Keeps the
+  // ReportCard rendering the latest partial state (growing call list, plan
+  // reasons streaming in) instead of staying blank until completion.
+  const handleSessionUpdate = (session: ResearchSession) => {
+    setActiveSession(session);
+  };
+
   const handleSessionComplete = (session: ResearchSession) => {
     setActiveSession(session);
     setRefreshToken((n) => n + 1);
@@ -22,58 +31,33 @@ export default function HomePage() {
 
   return (
     <div className="space-y-6">
+      <LiveStats />
       <BalanceCard />
       <AskBox
         onSessionStart={handleSessionStart}
+        onSessionUpdate={handleSessionUpdate}
         onSessionComplete={handleSessionComplete}
       />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
           {activeSession ? (
             <ReportCard session={activeSession} />
           ) : (
-            <div className="rounded-lg border border-dashed border-neutral-800 bg-neutral-900/20 p-10 text-center text-sm text-neutral-500">
-              Ask a question above to run a research session.
+            <div className="rounded-lg border border-dashed border-neutral-700 bg-neutral-800/20 p-10 text-center text-sm text-neutral-400">
+              Ask a question above to run a research session. Celina will plan
+              steps, pay each service via x402, synthesize a verdict, and
+              anchor it on-chain — all visible live in this panel.
             </div>
           )}
+          <SessionHistory
+            selectedId={activeSession?.id ?? null}
+            onSelect={setActiveSession}
+            refreshToken={refreshToken}
+          />
         </div>
-        <SessionHistory
-          selectedId={activeSession?.id ?? null}
-          onSelect={setActiveSession}
-          refreshToken={refreshToken}
-        />
-      </div>
-      <div className="flex flex-wrap gap-4 text-sm">
-        <a
-          href="/tx"
-          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
-        >
-          Transactions -&gt;
-        </a>
-        <a
-          href="/mcp"
-          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
-        >
-          MCP Activity -&gt;
-        </a>
-        <a
-          href="/learning"
-          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
-        >
-          Service Learning -&gt;
-        </a>
-        <a
-          href="/compare"
-          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
-        >
-          vs Manual Research -&gt;
-        </a>
-        <a
-          href="/memory"
-          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
-        >
-          Agent Memory -&gt;
-        </a>
+        <div className="space-y-6">
+          <EventStream />
+        </div>
       </div>
     </div>
   );

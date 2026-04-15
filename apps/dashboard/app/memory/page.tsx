@@ -31,7 +31,7 @@ export default function MemoryPage() {
     <div className="space-y-6">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xl font-bold">Agent Memory</h2>
-        <span className="text-xs text-neutral-500">24h TTL — active memories only</span>
+        <span className="text-xs text-neutral-400">24h TTL — active memories only</span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -43,7 +43,7 @@ export default function MemoryPage() {
         <StatCard label="Fallback (address)" value={fallbackCount} />
       </div>
 
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/20 p-4 text-sm text-neutral-400 space-y-1">
+      <div className="rounded-lg border border-neutral-700 bg-neutral-800/20 p-4 text-sm text-neutral-400 space-y-1">
         <p className="font-medium text-neutral-300">How dedup works</p>
         <p>
           After each completed session, Celina embeds the question with{' '}
@@ -56,13 +56,13 @@ export default function MemoryPage() {
       </div>
 
       {memories.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-neutral-800 p-10 text-center text-sm text-neutral-500">
+        <div className="rounded-lg border border-dashed border-neutral-700 p-10 text-center text-sm text-neutral-400">
           No active memories. Complete a research session to populate.
         </div>
       ) : (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 overflow-hidden">
+        <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-900 text-neutral-400 text-xs uppercase">
+            <thead className="bg-neutral-800 text-neutral-400 text-xs uppercase">
               <tr>
                 <th className="px-4 py-3 text-left">Question</th>
                 <th className="px-4 py-3 text-left">Verdict</th>
@@ -74,7 +74,7 @@ export default function MemoryPage() {
             </thead>
             <tbody>
               {memories.map((m) => (
-                <tr key={m.id} className="border-t border-neutral-800">
+                <tr key={m.id} className="border-t border-neutral-700">
                   <td className="px-4 py-3 max-w-xs">
                     <div className="text-xs text-neutral-300 truncate" title={m.question}>
                       {m.question.slice(0, 80)}{m.question.length > 80 ? '...' : ''}
@@ -82,7 +82,7 @@ export default function MemoryPage() {
                     {m.extractedAddresses.length > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {m.extractedAddresses.map((addr) => (
-                          <span key={addr} className="text-[10px] font-mono bg-neutral-800 px-1 rounded text-neutral-500">
+                          <span key={addr} className="text-[10px] font-mono bg-neutral-800 px-1 rounded text-neutral-400">
                             {addr.slice(0, 8)}…
                           </span>
                         ))}
@@ -103,13 +103,13 @@ export default function MemoryPage() {
                         384-dim
                       </span>
                     ) : (
-                      <span className="rounded bg-neutral-800 px-2 py-0.5 text-[10px] text-neutral-500">
+                      <span className="rounded bg-neutral-800 px-2 py-0.5 text-[10px] text-neutral-400">
                         fallback
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-xs text-neutral-500">{timeAgo(m.createdAt)}</td>
-                  <td className="px-4 py-3 text-xs text-neutral-500">{expiresIn(m.expiresAt)}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-400">{timeAgo(m.createdAt)}</td>
+                  <td className="px-4 py-3 text-xs text-neutral-400">{expiresIn(m.expiresAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -126,7 +126,7 @@ export default function MemoryPage() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+    <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
       <div className="text-xs uppercase text-neutral-400">{label}</div>
       <div className="mt-2 text-2xl font-bold font-mono">{value}</div>
     </div>

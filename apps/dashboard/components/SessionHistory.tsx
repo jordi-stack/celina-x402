@@ -28,7 +28,7 @@ export function SessionHistory({ selectedId, onSelect, refreshToken }: Props) {
     let cancelled = false;
     const load = async () => {
       try {
-        const res = await fetch('/api/sessions?limit=20', { cache: 'no-store' });
+        const res = await fetch('/api/sessions?limit=50', { cache: 'no-store' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const json = (await res.json()) as { sessions: ResearchSession[] };
         if (!cancelled) {
@@ -48,17 +48,24 @@ export function SessionHistory({ selectedId, onSelect, refreshToken }: Props) {
   }, [refreshToken]);
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
-      <div className="text-sm uppercase tracking-wide text-neutral-400 mb-3">
-        Recent Sessions
+    <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-6">
+      <div className="flex items-baseline justify-between mb-3">
+        <div className="text-sm uppercase tracking-wide text-neutral-400">
+          Recent Sessions
+        </div>
+        {sessions.length > 0 && (
+          <span className="text-[10px] uppercase tracking-wide text-neutral-400">
+            {sessions.length} · scroll for more
+          </span>
+        )}
       </div>
       {error && sessions.length === 0 && (
         <div className="text-xs text-rose-400">Error: {error}</div>
       )}
       {!error && sessions.length === 0 && (
-        <div className="text-xs text-neutral-600">No sessions yet. Ask something above.</div>
+        <div className="text-xs text-neutral-500">No sessions yet. Ask something above.</div>
       )}
-      <div className="space-y-2">
+      <div className="space-y-2 max-h-[480px] overflow-y-auto pr-1 -mr-1">
         {sessions.map((s) => {
           const selected = s.id === selectedId;
           return (
@@ -69,12 +76,12 @@ export function SessionHistory({ selectedId, onSelect, refreshToken }: Props) {
               className={`w-full text-left rounded border px-3 py-2 text-xs transition ${
                 selected
                   ? 'border-neutral-500 bg-neutral-800/60'
-                  : 'border-neutral-800 hover:border-neutral-600 hover:bg-neutral-900'
+                  : 'border-neutral-700 hover:border-neutral-600 hover:bg-neutral-800'
               }`}
             >
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-neutral-500 font-mono">{formatTime(s.createdAt)}</span>
-                <span className="text-neutral-600">{usdgFromMinimal(s.totalSpent)} USDG</span>
+                <span className="text-neutral-400 font-mono">{formatTime(s.createdAt)}</span>
+                <span className="text-neutral-500">{usdgFromMinimal(s.totalSpent)} USDG</span>
               </div>
               <div className="mt-1 text-neutral-200 truncate">{s.question}</div>
               {s.synthesis && (

@@ -63,9 +63,9 @@ export default function ComparePage() {
         </p>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-neutral-800">
+      <div className="overflow-hidden rounded-lg border border-neutral-700">
         <table className="w-full text-sm">
-          <thead className="bg-neutral-900 text-neutral-400 text-xs uppercase">
+          <thead className="bg-neutral-800 text-neutral-400 text-xs uppercase">
             <tr>
               <th className="px-4 py-3 text-left">Research task</th>
               <th className="px-4 py-3 text-left">Manual</th>
@@ -74,7 +74,7 @@ export default function ComparePage() {
           </thead>
           <tbody>
             {ROWS.map((r) => (
-              <tr key={r.task} className="border-t border-neutral-800 align-top">
+              <tr key={r.task} className="border-t border-neutral-700 align-top">
                 <td className="px-4 py-4 font-medium">{r.task}</td>
                 <td className="px-4 py-4 text-neutral-400">
                   <div className="font-medium text-neutral-300">{r.manualTime}</div>
@@ -87,7 +87,7 @@ export default function ComparePage() {
                       {r.celinaCost} USDG
                     </span>
                   </div>
-                  <div className="mt-1 text-xs text-neutral-500 font-mono">{r.celinaServices}</div>
+                  <div className="mt-1 text-xs text-neutral-400 font-mono">{r.celinaServices}</div>
                 </td>
               </tr>
             ))}
@@ -110,7 +110,7 @@ export default function ComparePage() {
         />
       </div>
 
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/20 p-5">
+      <div className="rounded-lg border border-neutral-700 bg-neutral-800/20 p-5">
         <p className="text-sm font-medium text-neutral-300 mb-2">Cost breakdown (all prices in USDG)</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
           {[
@@ -123,7 +123,7 @@ export default function ComparePage() {
             { name: 'DEX swap exec', price: '0.020' },
             { name: 'Cache hit (50% off)', price: 'varies' },
           ].map((s) => (
-            <div key={s.name} className="rounded border border-neutral-800 p-3">
+            <div key={s.name} className="rounded border border-neutral-700 p-3">
               <div className="text-xs text-neutral-400">{s.name}</div>
               <div className="mt-1 font-mono font-bold">{s.price}</div>
             </div>
@@ -140,7 +140,7 @@ export default function ComparePage() {
 
 function FeatureCard({ title, body }: { title: string; body: string }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+    <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
       <div className="text-sm font-medium text-neutral-200">{title}</div>
       <div className="mt-2 text-xs text-neutral-400">{body}</div>
     </div>

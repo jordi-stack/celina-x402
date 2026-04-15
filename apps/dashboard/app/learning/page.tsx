@@ -29,7 +29,7 @@ export default function LearningPage() {
     <div className="space-y-6">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xl font-bold">Service Learning</h2>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-neutral-400">
           Celina grades every paid call 0-1 for usefulness after synthesis. These scores
           bias future planning.
         </span>
@@ -42,13 +42,13 @@ export default function LearningPage() {
       </div>
 
       {stats.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-neutral-800 p-10 text-center text-sm text-neutral-500">
+        <div className="rounded-lg border border-dashed border-neutral-700 p-10 text-center text-sm text-neutral-400">
           No graded sessions yet. Run a research session first.
         </div>
       ) : (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 overflow-hidden">
+        <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-900 text-neutral-400 text-xs uppercase">
+            <thead className="bg-neutral-800 text-neutral-400 text-xs uppercase">
               <tr>
                 <th className="px-4 py-3 text-left">Service</th>
                 <th className="px-4 py-3 text-right">Calls</th>
@@ -62,7 +62,7 @@ export default function LearningPage() {
               {stats.map((s) => {
                 const trend = trendLabel(s.avgUsefulness);
                 return (
-                  <tr key={s.service} className="border-t border-neutral-800">
+                  <tr key={s.service} className="border-t border-neutral-700">
                     <td className="px-4 py-3 font-mono text-xs">{s.service}</td>
                     <td className="px-4 py-3 text-right font-mono text-xs">{s.callCount}</td>
                     <td className="px-4 py-3 text-right font-mono text-xs text-emerald-400">
@@ -88,7 +88,7 @@ export default function LearningPage() {
         </div>
       )}
 
-      <div className="rounded-lg border border-neutral-800 bg-neutral-900/20 p-4 text-sm text-neutral-400 space-y-1">
+      <div className="rounded-lg border border-neutral-700 bg-neutral-800/20 p-4 text-sm text-neutral-400 space-y-1">
         <p className="font-medium text-neutral-300">How Celina learns</p>
         <p>
           After every synthesis, the LLM retrospectively grades each paid call (0 = wasted USDG,
@@ -108,7 +108,7 @@ export default function LearningPage() {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-4">
+    <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-4">
       <div className="text-xs uppercase text-neutral-400">{label}</div>
       <div className="mt-2 text-2xl font-bold font-mono">{value}</div>
     </div>

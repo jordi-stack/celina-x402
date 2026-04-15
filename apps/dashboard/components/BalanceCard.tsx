@@ -61,12 +61,12 @@ export function BalanceCard() {
   }, []);
 
   return (
-    <div className="rounded-lg border border-neutral-800 bg-neutral-900/50 p-6">
+    <div className="rounded-lg border border-neutral-700 bg-neutral-800/50 p-6">
       <div className="flex items-baseline justify-between mb-4">
         <h3 className="text-sm uppercase tracking-wide text-neutral-400">
           Live wallet balance
         </h3>
-        <span className="text-xs text-neutral-500">
+        <span className="text-xs text-neutral-400">
           via OKX MCP &middot; refresh 5s
         </span>
       </div>
@@ -75,7 +75,7 @@ export function BalanceCard() {
         <div className="text-rose-400 text-sm">Error: {error}</div>
       )}
       {!error && !data && (
-        <div className="text-neutral-500 text-sm">Loading...</div>
+        <div className="text-neutral-400 text-sm">Loading...</div>
       )}
       {data && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -99,19 +99,19 @@ function WalletColumn({
   return (
     <div>
       <div className="flex items-baseline gap-2">
-        <span className="text-xs uppercase text-neutral-500">{wallet.label}</span>
-        <span className="font-mono text-xs text-neutral-600">
+        <span className="text-xs uppercase text-neutral-400">{wallet.label}</span>
+        <span className="font-mono text-xs text-neutral-500">
           {shortAddress(wallet.address)}
         </span>
       </div>
       <div className={`mt-2 text-3xl font-bold font-mono ${tintClass}`}>
         {wallet.error ? (
-          <span className="text-neutral-600">N/A</span>
+          <span className="text-neutral-500">N/A</span>
         ) : (
           <>
-            <span className="text-neutral-600 text-lg mr-1">{arrow}</span>
+            <span className="text-neutral-500 text-lg mr-1">{arrow}</span>
             {formatUsdg(wallet.usdg)}
-            <span className="text-neutral-500 text-sm ml-2">USDG</span>
+            <span className="text-neutral-400 text-sm ml-2">USDG</span>
           </>
         )}
       </div>
