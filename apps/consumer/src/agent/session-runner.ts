@@ -7,14 +7,19 @@ import type {
   ResearchStep,
   ResearchSynthesis,
 } from '@x402/shared';
-import { RESEARCH_SERVICE_CATALOG } from '@x402/shared';
-import type { WalletClient, X402PaymentClient } from '@x402/onchain-clients';
+import { RESEARCH_SERVICE_CATALOG, buildCanonicalVerdict, canonicalStringify } from '@x402/shared';
+import type { WalletClient, X402PaymentClient, AttestationClient } from '@x402/onchain-clients';
 import type { ReasonerClient } from '../reasoner/client';
 import { parseChallenge402, replayWithPayment } from '../http/replay';
+import { checkDedup, persistToMemory } from '../memory/dedup';
 
 export interface SessionRunnerConfig {
   producerUrl: string;
+  subagentUrl: string;
   consumerAccountId: string;
+  consumerAccountAddress: string;
+  celinaAttestationAddress: string;
+  xlayerRpcUrl: string;
   maxCalls: number;
   budgetUsdg: string;
 }
@@ -25,11 +30,13 @@ export interface SessionRunnerDeps {
   reasoner: ReasonerClient;
   walletClient: WalletClient;
   paymentClient: X402PaymentClient;
+  attestationClient: AttestationClient;
   config: SessionRunnerConfig;
 }
 
 export interface AskInput {
   question: string;
+  preId?: string;
 }
 
 /**
@@ -41,7 +48,7 @@ export async function runSession(
   deps: SessionRunnerDeps,
   input: AskInput
 ): Promise<ResearchSession> {
-  const id = `q_${randomUUID()}`;
+  const id = input.preId ?? `q_${randomUUID()}`;
   const session: ResearchSession = {
     id,
     question: input.question,
@@ -52,9 +59,43 @@ export async function runSession(
     createdAt: Date.now(),
     completedAt: null,
     error: null,
+    attestation: null,
   };
   deps.store.insertQuerySession(session);
   deps.eventBus.emit('QUERY_SESSION_STARTED', { sessionId: id, question: input.question });
+
+  // Memory dedup: check if a similar question was answered recently.
+  // If so, return a synthesized session from memory without any paid calls.
+  try {
+    const hit = await checkDedup(deps.store, input.question);
+    if (hit) {
+      const fromMemorySynthesis: ResearchSynthesis = {
+        verdict: `[From memory, ${Math.round(hit.similarity * 100)}% match] ${hit.verdict}`,
+        confidence: hit.confidenceScore >= 0.7 ? 'high' : hit.confidenceScore >= 0.4 ? 'medium' : 'low',
+        confidenceScore: hit.confidenceScore,
+        summary: `Celina answered a similar question ${Math.round((Date.now() - hit.cachedAt) / 60000)} minutes ago (${hit.method} similarity ${Math.round(hit.similarity * 100)}%). Returning cached verdict. Original session: ${hit.sessionId}.`,
+        keyFacts: [`Matched via ${hit.method}`, `Similarity: ${Math.round(hit.similarity * 100)}%`, `Previous cost: ${(Number(hit.totalSpent) / 1e6).toFixed(4)} USDG`],
+        contradictions: [],
+        callGrades: [],
+      };
+      session.synthesis = fromMemorySynthesis;
+      session.status = 'done';
+      session.completedAt = Date.now();
+      session.totalSpent = '0';
+      persist(deps, session);
+      deps.eventBus.emit('QUERY_SESSION_DONE', {
+        sessionId: id,
+        verdict: fromMemorySynthesis.verdict,
+        confidence: fromMemorySynthesis.confidence,
+        confidenceScore: fromMemorySynthesis.confidenceScore,
+        contradictions: 0,
+        totalSpent: '0',
+      });
+      return session;
+    }
+  } catch {
+    // Dedup check failures are non-fatal. Continue with fresh research.
+  }
 
   // Switch to Consumer account once up front. The producer does the MCP calls
   // from its own keys, so Consumer only needs to hold USDG + sign x402 payments.
@@ -69,12 +110,14 @@ export async function runSession(
     try {
       session.status = 'planning';
       persist(deps, session);
+      const serviceStats = deps.store.getServiceStats();
       const { step: nextStep } = await deps.reasoner.planStep({
         question: session.question,
         calls: session.calls,
         totalSpent: session.totalSpent,
         maxCalls: deps.config.maxCalls,
         budgetUsdg: deps.config.budgetUsdg,
+        serviceStats: serviceStats.length > 0 ? serviceStats : undefined,
       });
       step = nextStep;
     } catch (err) {
@@ -96,6 +139,8 @@ export async function runSession(
       action: step.action,
       service: step.service ?? null,
       reason: step.reason,
+      confidence: step.confidence,
+      expectedValue: step.expectedValue,
     });
 
     if (step.action === 'abort') {
@@ -126,7 +171,11 @@ export async function runSession(
     session.status = 'calling';
     persist(deps, session);
 
-    const call = await callPaidService(deps, service, args);
+    const call = await callPaidService(deps, service, args, {
+      planReason: step.reason,
+      planConfidence: step.confidence,
+      planExpectedValue: step.expectedValue,
+    });
     session.calls.push(call);
     session.totalSpent = addMinimal(session.totalSpent, call.amountSpent);
     persist(deps, session);
@@ -154,27 +203,120 @@ export async function runSession(
     return fail(deps, session, `synthesize failed: ${(err as Error).message}`);
   }
 
+  // Attach per-call grades produced by the synthesize tool so the dashboard
+  // can show which paid calls were retrospectively worth their USDG. The
+  // synthesize tool is instructed to emit one grade per input call in order,
+  // but the LLM occasionally skips a call; we pair by index and fall back to
+  // a name match so a drift doesn't lose all grades.
+  for (let i = 0; i < session.calls.length; i++) {
+    const call = session.calls[i]!;
+    const byIndex = synthesis.callGrades[i];
+    const match =
+      byIndex && byIndex.service === call.service
+        ? byIndex
+        : synthesis.callGrades.find((g) => g.service === call.service) ?? null;
+    call.grade = match;
+  }
+
   session.synthesis = synthesis;
+
+  // Attest the verdict on-chain. Failures are non-fatal: we record the error
+  // in session.error so the dashboard can surface it but the session still
+  // completes with a full synthesis for the user.
+  try {
+    const attestedAt = Date.now();
+    const canonicalPayload = buildCanonicalVerdict({
+      sessionId: session.id,
+      question: session.question,
+      synthesis,
+      totalSpentMinimal: session.totalSpent,
+      timestamp: attestedAt,
+    });
+    const canonicalJson = canonicalStringify(canonicalPayload);
+    const sessionHash = deps.attestationClient.hashSessionId(session.id);
+    const verdictHash = deps.attestationClient.hashVerdictPayload(canonicalJson);
+    const sig = await deps.attestationClient.signVerdict(canonicalJson);
+    const attestResult = await deps.attestationClient.attest({
+      sessionHash,
+      verdictHash,
+      verdict: synthesis.verdict,
+    });
+    session.attestation = {
+      sessionHash,
+      verdictHash,
+      signature: sig.signature,
+      signer: sig.signer,
+      txHash: attestResult.txHash,
+      contractAddress: deps.config.celinaAttestationAddress,
+      attestedAt,
+    };
+  } catch (err) {
+    const errMsg = `attestation failed: ${(err as Error).message}`;
+    session.error = session.error ? `${session.error} | ${errMsg}` : errMsg;
+  }
+
   session.status = 'done';
   session.completedAt = Date.now();
   persist(deps, session);
+
+  // Record call grades to service_performance so the planner can bias toward
+  // high-performing services in future sessions.
+  const gradedCalls = session.calls.filter((c) => c.grade !== null);
+  if (gradedCalls.length > 0) {
+    try {
+      deps.store.recordServiceGrades(
+        gradedCalls.map((c) => ({ service: c.service, usefulness: c.grade!.usefulness }))
+      );
+    } catch {
+      // Non-fatal: learning table update failures should not break the session.
+    }
+  }
+
+  // Persist verdict to session memory so future similar questions can be
+  // answered from cache without paying for new research.
+  if (synthesis.verdict && synthesis.confidenceScore >= 0.4) {
+    persistToMemory(deps.store, {
+      sessionId: session.id,
+      question: session.question,
+      verdict: synthesis.verdict,
+      confidenceScore: synthesis.confidenceScore,
+      totalSpent: session.totalSpent,
+    }).catch(() => {
+      // Non-fatal: memory persistence failure should not break the session.
+    });
+  }
   deps.eventBus.emit('QUERY_SESSION_DONE', {
     sessionId: id,
     verdict: synthesis.verdict,
     confidence: synthesis.confidence,
+    confidenceScore: synthesis.confidenceScore,
+    contradictions: synthesis.contradictions.length,
     totalSpent: session.totalSpent,
   });
   return session;
 }
 
+interface PlanAnnotation {
+  planReason: string;
+  planConfidence: number;
+  planExpectedValue: string;
+}
+
 async function callPaidService(
   deps: SessionRunnerDeps,
   service: ResearchServiceName,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  plan: PlanAnnotation
 ): Promise<ResearchCall> {
   const startedAt = Date.now();
   const meta = RESEARCH_SERVICE_CATALOG[service];
-  const url = `${deps.config.producerUrl}${meta.path}`;
+  // The catalog's `provider` field decides which upstream URL to hit.
+  // Producer hosts the raw OKX-tool services; Sub-agent hosts the
+  // composed services that themselves pay the Producer via x402 under
+  // Account 3 (agent-to-agent x402 chain).
+  const baseUrl =
+    meta.provider === 'subagent' ? deps.config.subagentUrl : deps.config.producerUrl;
+  const url = `${baseUrl}${meta.path}`;
 
   const base: ResearchCall = {
     service,
@@ -185,6 +327,10 @@ async function callPaidService(
     error: null,
     startedAt,
     durationMs: 0,
+    planReason: plan.planReason,
+    planConfidence: plan.planConfidence,
+    planExpectedValue: plan.planExpectedValue,
+    grade: null,
   };
 
   try {
@@ -281,6 +427,7 @@ function persist(deps: SessionRunnerDeps, session: ResearchSession): void {
     synthesis: session.synthesis,
     completedAt: session.completedAt,
     error: session.error,
+    attestation: session.attestation ?? null,
   });
 }
 

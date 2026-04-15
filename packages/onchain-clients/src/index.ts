@@ -23,8 +23,22 @@ export type {
 
 export { SecurityClient } from './security';
 
+export { SwapClient } from './swap';
+export type { SwapQuoteEntry, SwapExecResult } from './swap';
+
 export { createWalletHistoryFetcher } from './recovery-adapter';
 export type {
   WalletHistoryEntry,
   RecoveryAdapterOptions,
 } from './recovery-adapter';
+
+export {
+  AttestationClient,
+  CELINA_ATTESTATION_ABI,
+  getAttestationFromChain,
+} from './attestation';
+export type {
+  AttestationClientConfig,
+  AttestationResult,
+  MessageSignature,
+} from './attestation';

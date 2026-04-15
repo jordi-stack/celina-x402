@@ -61,6 +61,10 @@ interface TokenReportData {
   };
 }
 
+const TOKEN_REPORT_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const TOKEN_REPORT_FULL_PRICE = '15000';
+const TOKEN_REPORT_CACHE_PRICE = '7500'; // 50% on cache hit
+
 export const researchTokenReportRoute: FastifyPluginAsync<PluginOpts> = async (
   fastify,
   opts
@@ -69,8 +73,19 @@ export const researchTokenReportRoute: FastifyPluginAsync<PluginOpts> = async (
     '/research/token-report',
     {
       config: {
-        // 15000 minimal units = 0.015 USDG (6 decimals)
-        x402: { amount: '15000', service: 'research-token-report' },
+        x402: {
+          amount: TOKEN_REPORT_FULL_PRICE,
+          service: 'research-token-report',
+          // Tiered pricing: cache hit = 50% off. The priceFn runs in the
+          // x402 preHandler BEFORE the route handler, so request.body is
+          // available (Fastify parses body before preHandler stage).
+          priceFn: async (request) => {
+            const body = request.body as { tokenAddress?: string };
+            if (!body?.tokenAddress) return undefined;
+            const key = `research-token-report_${body.tokenAddress.toLowerCase()}`;
+            return opts.store.isCacheHit(key) ? TOKEN_REPORT_CACHE_PRICE : undefined;
+          },
+        },
       },
       schema: {
         body: {
@@ -85,6 +100,14 @@ export const researchTokenReportRoute: FastifyPluginAsync<PluginOpts> = async (
     async (request) => {
       const body = request.body as { tokenAddress: string };
       const token = body.tokenAddress.toLowerCase();
+
+      // Serve from cache when available (Consumer already paid the cache price).
+      const cacheKey = `research-token-report_${token}`;
+      const cached = opts.store.getCachedResult(cacheKey) as TokenReportData | null;
+      if (cached) {
+        return { service: 'research-token-report', data: cached, servedAt: Date.now(), cached: true };
+      }
+
       const start = Date.now();
 
       const [priceRes, scanRes, devRes, bundleRes, holdersRes] =
@@ -139,7 +162,10 @@ export const researchTokenReportRoute: FastifyPluginAsync<PluginOpts> = async (
         signals: { redFlags, riskScore, verdict, reasons },
       };
 
-      return { service: 'research-token-report', data, servedAt: Date.now() };
+      // Populate cache so the next request for the same token gets tiered pricing.
+      opts.store.setCachedResult(cacheKey, data, TOKEN_REPORT_TTL_MS);
+
+      return { service: 'research-token-report', data, servedAt: Date.now(), cached: false };
     }
   );
 };

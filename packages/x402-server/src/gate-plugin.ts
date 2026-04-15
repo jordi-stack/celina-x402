@@ -3,12 +3,25 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { Store, EventBus } from '@x402/orchestrator';
 import type { PaymentPayload } from '@x402/shared';
 import { USDG_CONTRACT } from '@x402/shared';
-import { FacilitatorClient } from '../facilitator/client';
+import { FacilitatorClient } from './facilitator-client';
 import { encode402Payload, decodePaymentPayload } from './payload-codec';
 
 export interface X402RouteOptions {
   amount: string;
   service: string;
+  /**
+   * Optional dynamic price resolver. When provided, the gate calls this
+   * before emitting the 402 challenge and uses the returned amount instead
+   * of the static `amount` field. Return undefined to fall back to `amount`.
+   *
+   * Used by tiered pricing: Producer routes check the MCP result cache and
+   * return 50% price on a cache hit. The client sees the reduced price in
+   * the PAYMENT-REQUIRED header and pays that amount. Settlement happens for
+   * whatever amount was in the signed payload, so the gate never needs to
+   * validate against the static `amount` — only the facilitator verify/settle
+   * step matters, and it uses decoded.accepted (what the client signed).
+   */
+  priceFn?: (request: import('fastify').FastifyRequest) => Promise<string | undefined>;
 }
 
 export interface X402GateOptions {
@@ -29,6 +42,11 @@ declare module 'fastify' {
   }
 }
 
+// Shared Fastify plugin that gates routes whose config includes an `x402`
+// block. Used by both the Producer (selling research to Consumer) and the
+// Sub-agent (selling composed research to Consumer while itself buying raw
+// research from Producer). Both cases share the exact same preHandler +
+// onResponse contract so the plugin lives here and both apps mount it.
 const x402GatePlugin: FastifyPluginAsync<X402GateOptions> = async (fastify, opts) => {
   fastify.addHook('preHandler', async (request, reply) => {
     const routeOpts = request.routeOptions.config?.x402;
@@ -37,6 +55,14 @@ const x402GatePlugin: FastifyPluginAsync<X402GateOptions> = async (fastify, opts
     const paymentHeader = request.headers['payment-signature'] as string | undefined;
 
     if (!paymentHeader) {
+      // Resolve effective price: priceFn overrides static amount when provided.
+      // This enables tiered pricing (cache hit = 50% off) without changing the
+      // rest of the x402 flow — the client just sees a different amount in the
+      // PAYMENT-REQUIRED challenge and signs for that amount.
+      const effectiveAmount = routeOpts.priceFn
+        ? ((await routeOpts.priceFn(request)) ?? routeOpts.amount)
+        : routeOpts.amount;
+
       const challenge = encode402Payload({
         x402Version: 2,
         resource: {
@@ -48,7 +74,7 @@ const x402GatePlugin: FastifyPluginAsync<X402GateOptions> = async (fastify, opts
           {
             scheme: 'exact',
             network: 'eip155:196',
-            amount: routeOpts.amount,
+            amount: effectiveAmount,
             asset: USDG_CONTRACT,
             payTo: opts.producerAddress,
             maxTimeoutSeconds: 60,

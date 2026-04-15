@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { encode402Payload, decodePaymentPayload } from '../../src/plugins/payload-codec';
+import { encode402Payload, decodePaymentPayload } from '@x402/x402-server';
 import type { Challenge402, PaymentPayload } from '@x402/shared';
 
 describe('encode402Payload / decodePaymentPayload', () => {

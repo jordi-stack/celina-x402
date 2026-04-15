@@ -10,7 +10,8 @@
     "spike:mcp": "tsx src/spikes/mcp-spike.ts",
     "spike:all": "pnpm spike:cli && pnpm spike:facilitator && pnpm spike:mcp",
     "health-check": "tsx src/health-check.ts",
-    "demo": "tsx src/demo-runner.ts"
+    "demo": "tsx src/demo-runner.ts",
+    "demo-sweep": "tsx src/demo-data-sweep.ts"
   },
   "dependencies": {
     "@x402/mcp-client": "workspace:*",

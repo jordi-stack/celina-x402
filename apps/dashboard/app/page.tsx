@@ -43,7 +43,7 @@ export default function HomePage() {
           refreshToken={refreshToken}
         />
       </div>
-      <div className="flex gap-4 text-sm">
+      <div className="flex flex-wrap gap-4 text-sm">
         <a
           href="/tx"
           className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
@@ -55,6 +55,24 @@ export default function HomePage() {
           className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
         >
           MCP Activity -&gt;
+        </a>
+        <a
+          href="/learning"
+          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
+        >
+          Service Learning -&gt;
+        </a>
+        <a
+          href="/compare"
+          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
+        >
+          vs Manual Research -&gt;
+        </a>
+        <a
+          href="/memory"
+          className="rounded border border-neutral-700 px-4 py-2 hover:bg-neutral-800"
+        >
+          Agent Memory -&gt;
         </a>
       </div>
     </div>

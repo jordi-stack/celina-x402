@@ -7,6 +7,8 @@ export type {
   DecisionRow,
   McpCallRow,
   QuerySessionRow,
+  ServiceStat,
+  MemoryRow,
 } from './db/store';
 export { EventBus } from './events/bus';
 export type { EventSource, ReplayEvent, AuditEventRow } from './events/bus';

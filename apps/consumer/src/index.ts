@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { migrate, Store, EventBus } from '@x402/orchestrator';
-import { WalletClient, X402PaymentClient } from '@x402/onchain-clients';
+import { WalletClient, X402PaymentClient, AttestationClient } from '@x402/onchain-clients';
 import { CONSUMER_API_PORT } from '@x402/shared';
 import { config } from './config';
 import { ReasonerClient } from './reasoner/client';
@@ -17,6 +17,11 @@ async function main() {
   const eventBus = new EventBus(db, 'consumer');
   const walletClient = new WalletClient();
   const paymentClient = new X402PaymentClient();
+  const attestationClient = new AttestationClient({
+    contractAddress: config.celinaAttestationAddress as `0x${string}`,
+    chain: 'xlayer',
+    accountAddress: config.consumerAccountAddress,
+  });
 
   const reasoner = new ReasonerClient({
     apiKey: config.groqApiKey,
@@ -30,9 +35,14 @@ async function main() {
     reasoner,
     walletClient,
     paymentClient,
+    attestationClient,
     runnerConfig: {
       producerUrl: config.producerUrl,
+      subagentUrl: config.subagentUrl,
       consumerAccountId: config.consumerAccountId,
+      consumerAccountAddress: config.consumerAccountAddress,
+      celinaAttestationAddress: config.celinaAttestationAddress,
+      xlayerRpcUrl: config.xlayerRpcUrl,
       maxCalls: config.maxCallsPerSession,
       budgetUsdg: config.sessionBudgetUsdg,
     },

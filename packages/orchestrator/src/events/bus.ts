@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import type Database from 'better-sqlite3';
 
-export type EventSource = 'producer' | 'consumer' | 'orchestrator';
+export type EventSource = 'producer' | 'consumer' | 'subagent' | 'orchestrator';
 
 export interface AuditEventRow {
   id: number;

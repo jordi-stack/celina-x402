@@ -8,16 +8,17 @@ import {
   TrenchesClient,
   SecurityClient,
   WalletClient,
+  SwapClient,
   createWalletHistoryFetcher,
 } from '@x402/onchain-clients';
+import { FacilitatorClient, x402GatePlugin } from '@x402/x402-server';
 import { config } from './config';
-import { FacilitatorClient } from './facilitator/client';
-import x402GatePlugin from './plugins/x402-gate';
 import { researchTokenReportRoute } from './routes/research-token-report';
 import { researchWalletRiskRoute } from './routes/research-wallet-risk';
 import { researchLiquidityHealthRoute } from './routes/research-liquidity-health';
 import { signalWhaleWatchRoute } from './routes/signal-whale-watch';
 import { signalNewTokenScoutRoute } from './routes/signal-new-token-scout';
+import { actionSwapExecRoute } from './routes/action-swap-exec';
 
 async function bootstrap() {
   mkdirSync(path.dirname(config.dbPath), { recursive: true });
@@ -63,6 +64,7 @@ async function bootstrap() {
   });
   const trenchesClient = new TrenchesClient();
   const securityClient = new SecurityClient();
+  const swapClient = new SwapClient();
   const facilitator = new FacilitatorClient({
     baseUrl: config.facilitatorBase,
     apiKey: config.okxApiKey,
@@ -99,6 +101,10 @@ async function bootstrap() {
     securityClient,
     trenchesClient,
     store,
+  });
+  await fastify.register(actionSwapExecRoute, {
+    swapClient,
+    producerAddress: config.producerAddress,
   });
 
   try {

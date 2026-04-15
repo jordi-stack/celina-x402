@@ -43,6 +43,10 @@ const PROBES = [
   { label: '1000', amount: '1000000000' },
 ] as const;
 
+const LIQUIDITY_TTL_MS = 3 * 60 * 1000; // 3 minutes (liquidity changes faster)
+const LIQUIDITY_FULL_PRICE = '8000';
+const LIQUIDITY_CACHE_PRICE = '4000'; // 50% on cache hit
+
 export const researchLiquidityHealthRoute: FastifyPluginAsync<PluginOpts> = async (
   fastify,
   opts
@@ -51,8 +55,16 @@ export const researchLiquidityHealthRoute: FastifyPluginAsync<PluginOpts> = asyn
     '/research/liquidity-health',
     {
       config: {
-        // 8000 minimal units = 0.008 USDG
-        x402: { amount: '8000', service: 'research-liquidity-health' },
+        x402: {
+          amount: LIQUIDITY_FULL_PRICE,
+          service: 'research-liquidity-health',
+          priceFn: async (request) => {
+            const body = request.body as { tokenAddress?: string };
+            if (!body?.tokenAddress) return undefined;
+            const key = `research-liquidity-health_${body.tokenAddress.toLowerCase()}`;
+            return opts.store.isCacheHit(key) ? LIQUIDITY_CACHE_PRICE : undefined;
+          },
+        },
       },
       schema: {
         body: {
@@ -67,6 +79,14 @@ export const researchLiquidityHealthRoute: FastifyPluginAsync<PluginOpts> = asyn
     async (request) => {
       const body = request.body as { tokenAddress: string };
       const token = body.tokenAddress.toLowerCase();
+
+      // Serve from cache on cache hit (Consumer already paid the cache price).
+      const cacheKey = `research-liquidity-health_${token}`;
+      const cached = opts.store.getCachedResult(cacheKey) as LiquidityHealthData | null;
+      if (cached) {
+        return { service: 'research-liquidity-health', data: cached, servedAt: Date.now(), cached: true };
+      }
+
       const start = Date.now();
 
       const quoteTasks = PROBES.map((p) =>
@@ -132,7 +152,10 @@ export const researchLiquidityHealthRoute: FastifyPluginAsync<PluginOpts> = asyn
         signals: { health, impactAt100, impactAt1000, reasons },
       };
 
-      return { service: 'research-liquidity-health', data, servedAt: Date.now() };
+      // Populate cache so the next request for the same token gets tiered pricing.
+      opts.store.setCachedResult(cacheKey, data, LIQUIDITY_TTL_MS);
+
+      return { service: 'research-liquidity-health', data, servedAt: Date.now(), cached: false };
     }
   );
 };

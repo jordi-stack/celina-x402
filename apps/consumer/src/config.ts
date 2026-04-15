@@ -7,6 +7,8 @@ import {
   GROQ_FAST_MODEL,
   USDG_CONTRACT,
   PRODUCER_PORT,
+  SUBAGENT_PORT,
+  CELINA_ATTESTATION_ADDRESS,
 } from '@x402/shared';
 
 // Resolve .env relative to this source file so the loader works regardless
@@ -28,8 +30,12 @@ export const config = {
   groqPrimaryModel: process.env.GROQ_PRIMARY_MODEL ?? GROQ_PRIMARY_MODEL,
   groqFastModel: process.env.GROQ_FAST_MODEL ?? GROQ_FAST_MODEL,
   consumerAccountId: requireEnv('CONSUMER_ACCOUNT_ID'),
+  consumerAccountAddress: requireEnv('CONSUMER_ADDRESS'),
   producerUrl: process.env.PRODUCER_URL ?? `http://localhost:${PRODUCER_PORT}`,
+  subagentUrl: process.env.SUBAGENT_URL ?? `http://localhost:${SUBAGENT_PORT}`,
   usdgContract: USDG_CONTRACT,
+  celinaAttestationAddress: process.env.CELINA_ATTESTATION_ADDRESS ?? CELINA_ATTESTATION_ADDRESS,
+  xlayerRpcUrl: process.env.XLAYER_RPC_URL ?? 'https://rpc.xlayer.tech',
   dbPath: process.env.APP_DB_PATH ?? path.join(repoRoot, 'data/app.db'),
   maxCallsPerSession: Number(process.env.MAX_CALLS_PER_SESSION ?? '4'),
   sessionBudgetUsdg: process.env.SESSION_BUDGET_USDG ?? '0.10',

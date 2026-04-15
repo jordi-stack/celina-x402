@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { FacilitatorClient } from '../../src/facilitator/client';
+import { FacilitatorClient } from '@x402/x402-server';
 
 describe('FacilitatorClient', () => {
   const originalFetch = global.fetch;

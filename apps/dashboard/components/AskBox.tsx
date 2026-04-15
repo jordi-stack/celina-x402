@@ -15,15 +15,50 @@ const SUGGESTIONS = [
   'Is 0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25 a risky wallet?',
 ];
 
+const TERMINAL_STATUSES = new Set(['done', 'failed', 'aborted']);
+
+function statusLabel(status: string, callCount: number): string {
+  switch (status) {
+    case 'planning': return 'Planning next step...';
+    case 'calling': return `Calling paid service (#${callCount + 1})...`;
+    case 'synthesizing': return 'Synthesizing verdict...';
+    case 'done': return 'Done';
+    case 'failed': return 'Failed';
+    case 'aborted': return 'Aborted';
+    default: return 'Working...';
+  }
+}
+
 export function AskBox({ onSessionStart, onSessionComplete }: Props) {
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
+  const [liveStatus, setLiveStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const pollSession = async (sessionId: string) => {
+    const MAX_POLLS = 120; // 2 minutes at 1s intervals
+    for (let i = 0; i < MAX_POLLS; i++) {
+      await new Promise((r) => setTimeout(r, 1000));
+      try {
+        const res = await fetch(`/api/sessions/${sessionId}`, { cache: 'no-store' });
+        if (!res.ok) continue;
+        const session = (await res.json()) as ResearchSession;
+        setLiveStatus(statusLabel(session.status, session.calls.length));
+        if (TERMINAL_STATUSES.has(session.status)) {
+          return session;
+        }
+      } catch {
+        // transient fetch errors during polling are non-fatal
+      }
+    }
+    throw new Error('Session timed out after 2 minutes');
+  };
 
   const submit = async (q: string) => {
     if (!q.trim() || busy) return;
     setBusy(true);
     setError(null);
+    setLiveStatus('Submitting...');
     try {
       const res = await fetch('/api/ask', {
         method: 'POST',
@@ -34,14 +69,27 @@ export function AskBox({ onSessionStart, onSessionComplete }: Props) {
         const text = await res.text();
         throw new Error(`${res.status}: ${text.slice(0, 200)}`);
       }
-      const session = (await res.json()) as ResearchSession;
-      onSessionStart(session.id);
-      onSessionComplete(session);
+      const body = (await res.json()) as { id: string; status: string } | ResearchSession;
+      const sessionId = body.id;
+      if (!sessionId) throw new Error('No session id in response');
+
+      onSessionStart(sessionId);
+      setLiveStatus('Planning next step...');
+
+      // If the server already returned a terminal session (wait=true legacy),
+      // use it directly. Otherwise poll until the background run finishes.
+      if (TERMINAL_STATUSES.has((body as ResearchSession).status ?? '')) {
+        onSessionComplete(body as ResearchSession);
+      } else {
+        const completed = await pollSession(sessionId);
+        onSessionComplete(completed);
+      }
       setQuestion('');
     } catch (err) {
       setError((err as Error).message);
     } finally {
       setBusy(false);
+      setLiveStatus(null);
     }
   };
 
@@ -67,7 +115,11 @@ export function AskBox({ onSessionStart, onSessionComplete }: Props) {
         />
         <div className="flex items-center justify-between">
           <div className="text-xs text-neutral-500">
-            Each call is paid via x402 from the Consumer wallet.
+            {liveStatus ? (
+              <span className="text-blue-400 font-mono">{liveStatus}</span>
+            ) : (
+              'Each call is paid via x402 from the Consumer wallet.'
+            )}
           </div>
           <button
             type="submit"

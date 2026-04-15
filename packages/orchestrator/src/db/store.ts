@@ -7,6 +7,12 @@ import type {
   ResearchSessionStatus,
   ResearchSynthesis,
 } from '@x402/shared';
+import {
+  ResearchCallSchema,
+  ResearchSynthesisSchema,
+  SessionAttestationSchema,
+  type SessionAttestation,
+} from '@x402/shared';
 
 export interface LoopCycleRow {
   cycle_number: number;
@@ -69,6 +75,29 @@ export interface QuerySessionRow {
   created_at: number;
   completed_at: number | null;
   error: string | null;
+  attestation: string | null;
+}
+
+export interface MemoryRow {
+  id: number;
+  sessionId: string;
+  question: string;
+  embedding: number[] | null;
+  extractedAddresses: string[];
+  verdict: string;
+  confidenceScore: number;
+  totalSpent: string;
+  createdAt: number;
+  expiresAt: number;
+}
+
+export interface ServiceStat {
+  service: string;
+  callCount: number;
+  usefulCount: number;
+  wastedCount: number;
+  avgUsefulness: number;
+  lastUsed: number | null;
 }
 
 export class Store {
@@ -250,12 +279,159 @@ export class Store {
     return rows.map((r) => ({ ...r, success: Boolean(r.success) }));
   }
 
+  // ---------------------------------------------------------------------------
+  // MCP result cache (Tier 1 #4 tiered pricing)
+  // ---------------------------------------------------------------------------
+
+  getCachedResult(cacheKey: string): unknown | null {
+    const row = this.db
+      .prepare(`SELECT data, cached_at, ttl_ms FROM mcp_result_cache WHERE cache_key = ?`)
+      .get(cacheKey) as { data: string; cached_at: number; ttl_ms: number } | undefined;
+    if (!row) return null;
+    if (Date.now() > row.cached_at + row.ttl_ms) return null; // expired
+    return JSON.parse(row.data) as unknown;
+  }
+
+  isCacheHit(cacheKey: string): boolean {
+    return this.getCachedResult(cacheKey) !== null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Service performance (Tier 2 #12 self-grading)
+  // ---------------------------------------------------------------------------
+
+  recordServiceGrades(grades: Array<{ service: string; usefulness: number }>): void {
+    const stmt = this.db.prepare(`
+      INSERT INTO service_performance (service, call_count, useful_count, wasted_count, total_usefulness, last_used)
+      VALUES (?, 1, ?, ?, ?, ?)
+      ON CONFLICT(service) DO UPDATE SET
+        call_count = call_count + 1,
+        useful_count = useful_count + excluded.useful_count,
+        wasted_count = wasted_count + excluded.wasted_count,
+        total_usefulness = total_usefulness + excluded.total_usefulness,
+        last_used = excluded.last_used
+    `);
+    const now = Date.now();
+    const run = this.db.transaction(
+      (gs: Array<{ service: string; usefulness: number }>) => {
+        for (const g of gs) {
+          stmt.run(
+            g.service,
+            g.usefulness >= 0.7 ? 1 : 0,
+            g.usefulness < 0.3 ? 1 : 0,
+            g.usefulness,
+            now
+          );
+        }
+      }
+    );
+    run(grades);
+  }
+
+  getServiceStats(): ServiceStat[] {
+    interface Row {
+      service: string;
+      call_count: number;
+      useful_count: number;
+      wasted_count: number;
+      total_usefulness: number;
+      last_used: number | null;
+    }
+    const rows = this.db
+      .prepare(`SELECT * FROM service_performance ORDER BY call_count DESC`)
+      .all() as Row[];
+    return rows.map((r) => ({
+      service: r.service,
+      callCount: r.call_count,
+      usefulCount: r.useful_count,
+      wastedCount: r.wasted_count,
+      avgUsefulness: r.call_count > 0 ? r.total_usefulness / r.call_count : 0,
+      lastUsed: r.last_used,
+    }));
+  }
+
+  // ---------------------------------------------------------------------------
+  // Session memory (Tier 2 #11 agent memory + dedup)
+  // ---------------------------------------------------------------------------
+
+  insertMemory(opts: {
+    sessionId: string;
+    question: string;
+    embedding: number[] | null;
+    extractedAddresses: string[];
+    verdict: string;
+    confidenceScore: number;
+    totalSpent: string;
+    ttlMs?: number;
+  }): void {
+    const now = Date.now();
+    const ttl = opts.ttlMs ?? 24 * 60 * 60 * 1000; // 24h default
+    this.db
+      .prepare(
+        `INSERT OR REPLACE INTO session_memory
+         (session_id, question, embedding, extracted_addresses, verdict, confidence_score, total_spent, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        opts.sessionId,
+        opts.question,
+        opts.embedding ? JSON.stringify(opts.embedding) : null,
+        JSON.stringify(opts.extractedAddresses),
+        opts.verdict,
+        opts.confidenceScore,
+        opts.totalSpent,
+        now,
+        now + ttl
+      );
+  }
+
+  listActiveMemories(): MemoryRow[] {
+    const now = Date.now();
+    interface Row {
+      id: number;
+      session_id: string;
+      question: string;
+      embedding: string | null;
+      extracted_addresses: string;
+      verdict: string;
+      confidence_score: number;
+      total_spent: string;
+      created_at: number;
+      expires_at: number;
+    }
+    const rows = this.db
+      .prepare(`SELECT * FROM session_memory WHERE expires_at > ? ORDER BY created_at DESC`)
+      .all(now) as Row[];
+    return rows.map((r) => ({
+      id: r.id,
+      sessionId: r.session_id,
+      question: r.question,
+      embedding: r.embedding ? (JSON.parse(r.embedding) as number[]) : null,
+      extractedAddresses: JSON.parse(r.extracted_addresses) as string[],
+      verdict: r.verdict,
+      confidenceScore: r.confidence_score,
+      totalSpent: r.total_spent,
+      createdAt: r.created_at,
+      expiresAt: r.expires_at,
+    }));
+  }
+
+  setCachedResult(cacheKey: string, data: unknown, ttlMs: number): void {
+    this.db
+      .prepare(
+        `INSERT INTO mcp_result_cache (cache_key, data, cached_at, ttl_ms)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(cache_key) DO UPDATE SET data = excluded.data, cached_at = excluded.cached_at, ttl_ms = excluded.ttl_ms`
+      )
+      .run(cacheKey, JSON.stringify(data), Date.now(), ttlMs);
+  }
+
   insertQuerySession(session: ResearchSession): void {
     this.db
       .prepare(
         `INSERT INTO query_sessions
-         (id, question, status, calls, total_spent, synthesis, created_at, completed_at, error)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+         (id, question, status, calls, total_spent, synthesis, created_at, completed_at, error, attestation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         session.id,
@@ -266,7 +442,8 @@ export class Store {
         session.synthesis ? JSON.stringify(session.synthesis) : null,
         session.createdAt,
         session.completedAt,
-        session.error
+        session.error,
+        session.attestation ? JSON.stringify(session.attestation) : null
       );
   }
 
@@ -279,6 +456,7 @@ export class Store {
       synthesis?: ResearchSynthesis | null;
       completedAt?: number | null;
       error?: string | null;
+      attestation?: SessionAttestation | null;
     }
   ): void {
     const sets: string[] = [];
@@ -307,6 +485,10 @@ export class Store {
       sets.push('error = ?');
       args.push(patch.error);
     }
+    if (patch.attestation !== undefined) {
+      sets.push('attestation = ?');
+      args.push(patch.attestation ? JSON.stringify(patch.attestation) : null);
+    }
     if (sets.length === 0) return;
     args.push(id);
     this.db
@@ -330,15 +512,28 @@ export class Store {
 }
 
 function hydrateQuerySession(row: QuerySessionRow): ResearchSession {
+  // Zod parse so .default()s on newly-added ResearchCall/ResearchSynthesis
+  // fields (planReason, planConfidence, planExpectedValue, grade,
+  // confidenceScore, contradictions, callGrades) backfill cleanly for
+  // legacy rows that were written before the function-calling refactor.
+  const rawCalls = JSON.parse(row.calls) as unknown[];
+  const calls = rawCalls.map((c) => ResearchCallSchema.parse(c));
+  const synthesis = row.synthesis
+    ? ResearchSynthesisSchema.parse(JSON.parse(row.synthesis))
+    : null;
+  const attestation = row.attestation
+    ? SessionAttestationSchema.parse(JSON.parse(row.attestation))
+    : null;
   return {
     id: row.id,
     question: row.question,
     status: row.status as ResearchSessionStatus,
-    calls: JSON.parse(row.calls) as ResearchCall[],
+    calls,
     totalSpent: row.total_spent,
-    synthesis: row.synthesis ? (JSON.parse(row.synthesis) as ResearchSynthesis) : null,
+    synthesis,
     createdAt: row.created_at,
     completedAt: row.completed_at,
     error: row.error,
+    attestation,
   };
 }

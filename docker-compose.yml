@@ -1,0 +1,89 @@
+services:
+  producer:
+    build:
+      context: .
+      target: producer
+    ports:
+      - "3001:3001"
+    env_file: .env
+    environment:
+      APP_DB_PATH: /app/data/app.db
+    volumes:
+      - db_data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  subagent:
+    build:
+      context: .
+      target: subagent
+    ports:
+      - "3003:3003"
+    env_file: .env
+    environment:
+      APP_DB_PATH: /app/data/app.db
+      PRODUCER_URL: http://producer:3001
+    volumes:
+      - db_data:/app/data
+    depends_on:
+      producer:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  consumer:
+    build:
+      context: .
+      target: consumer
+    ports:
+      - "3002:3002"
+    env_file: .env
+    environment:
+      APP_DB_PATH: /app/data/app.db
+      PRODUCER_URL: http://producer:3001
+      SUBAGENT_URL: http://subagent:3003
+    volumes:
+      - db_data:/app/data
+      - transformers_cache:/app/.transformers-cache
+    depends_on:
+      producer:
+        condition: service_healthy
+      subagent:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  dashboard:
+    build:
+      context: .
+      target: dashboard
+    ports:
+      - "3000:3000"
+    env_file: .env
+    environment:
+      APP_DB_PATH: /app/data/app.db
+    volumes:
+      - db_data:/app/data
+    depends_on:
+      consumer:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  db_data:
+  transformers_cache:

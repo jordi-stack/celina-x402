@@ -73,8 +73,51 @@ export const SCHEMA_STATEMENTS: readonly string[] = [
     synthesis TEXT,
     created_at INTEGER NOT NULL,
     completed_at INTEGER,
-    error TEXT
+    error TEXT,
+    attestation TEXT
   )`,
+  // Added 2026-04-15 for Tier 0 #2 (on-chain attestation). ALTER is
+  // no-op when the column already exists on fresh schemas; on older
+  // DBs we catch the "duplicate column name" error in migrate().
+  `ALTER TABLE query_sessions ADD COLUMN attestation TEXT`,
+  // Added 2026-04-15 for Tier 1 #4 tiered pricing. Caches raw MCP results
+  // by service+tokenAddress. On cache hit the Producer charges 50% price.
+  // TTL is enforced at read time (caller checks cached_at + ttl_ms < now).
+  `CREATE TABLE IF NOT EXISTS mcp_result_cache (
+    cache_key TEXT PRIMARY KEY,
+    data TEXT NOT NULL,
+    cached_at INTEGER NOT NULL,
+    ttl_ms INTEGER NOT NULL
+  )`,
+  // Added 2026-04-15 for Tier 2 #12 self-grading. The synthesizer grades every
+  // paid call 0..1 for usefulness. This table aggregates those grades per
+  // service so the planner can bias toward high-performing services over time.
+  `CREATE TABLE IF NOT EXISTS service_performance (
+    service TEXT PRIMARY KEY,
+    call_count INTEGER NOT NULL DEFAULT 0,
+    useful_count INTEGER NOT NULL DEFAULT 0,
+    wasted_count INTEGER NOT NULL DEFAULT 0,
+    total_usefulness REAL NOT NULL DEFAULT 0,
+    last_used INTEGER
+  )`,
+  // Added 2026-04-15 for Tier 2 #11 agent memory + dedup. Each completed
+  // session writes a row with its embedding vector so future queries can
+  // check cosine similarity and skip re-paying for duplicate research.
+  // embedding is a JSON float32 array (384 dims, all-MiniLM-L6-v2).
+  // expires_at = created_at + 24h; rows past expiry are ignored at read time.
+  `CREATE TABLE IF NOT EXISTS session_memory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_id TEXT NOT NULL,
+    question TEXT NOT NULL,
+    embedding TEXT,
+    extracted_addresses TEXT NOT NULL,
+    verdict TEXT NOT NULL,
+    confidence_score REAL NOT NULL,
+    total_spent TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_session_memory_expires ON session_memory(expires_at)`,
   `CREATE INDEX IF NOT EXISTS idx_audit_events_id ON audit_events(id)`,
   `CREATE INDEX IF NOT EXISTS idx_payments_cycle ON payments(cycle_number)`,
   `CREATE INDEX IF NOT EXISTS idx_payments_nonce ON payments(nonce)`,

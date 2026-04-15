@@ -1,0 +1,9 @@
+{
+  "address": "0x3d3AA2fad1a36fCe912f1c17F588270C5bEb810B",
+  "txHash": "0x429b2676cd38d973ffecff1f3616d71d4ea5a9a63c6d6d03c2b75d9fb5d6671c",
+  "deployer": "c90a20ab-d544-47e6-b227-0c259e0db291",
+  "salt": "0x3ad003d7715091bdec2cce56c2f9ea26f4a8d28517805a5eca4e716417b99588",
+  "chainId": 196,
+  "contractName": "CelinaAttestation",
+  "deployedAt": "2026-04-15T12:54:47.312Z"
+}
