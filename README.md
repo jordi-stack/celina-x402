@@ -16,7 +16,7 @@ Celina's onchain identity is an **OKX Agentic Wallet** created through the `onch
 |---|---|---|---|
 | Consumer | `c90a20ab-d544-47e6-b227-0c259e0db291` | `0x5fa0f8f77b47ea1ca48d8c9ed8560a130ad64e25` | The intelligence agent. Holds USDG, plans research steps with Groq, signs x402 proofs, replays paid HTTP requests, synthesizes verdicts, and anchors each verdict to `CelinaAttestation.sol`. |
 | Producer | `a782c10a-0678-4164-8419-2085797410d6` | `0xdfe57c7775f09599d12d11370a0afcb27f6aadbc` | The research service host. Exposes 7 paid routes behind x402 paywalls, queries OnchainOS modules, collects USDG. |
-| Sub-agent | Account 3 (separate wallet) | — | A second Consumer that the Consumer spawns for complex questions. The Sub-agent pays the Producer via x402 for `research-token-report` + `research-liquidity-health`, correlates the results, and returns a composed deep-dive report. This is the agent-to-agent x402 chain: Consumer pays Sub-agent, Sub-agent pays Producer. |
+| Sub-agent | `SUBAGENT_ACCOUNT_ID` in `.env` | `SUBAGENT_ADDRESS` in `.env` | A third account that hosts the `research-deep-dive` composed service on `:3003`. Consumer pays the Sub-agent via x402; the Sub-agent then pays the Producer via x402 for `research-token-report` + `research-liquidity-health` and correlates the two reports into one verdict. This is the agent-to-agent x402 chain: Consumer → Sub-agent → Producer, two independent wallet-to-wallet settlements inside one user request. |
 
 All three roles live under one AK login so credentials stay minimal and all three agent addresses can be audited as one economic unit on OKLink. No private key ever enters application memory; every signature goes through the `onchainos` CLI, which keeps keys inside the wallet's TEE.
 
@@ -134,7 +134,7 @@ To verify Celina is alive on-chain, look up either address on OKLink X Layer and
 
 ### Verified end-to-end on chain 196
 
-A deterministic coverage sweep on 2026-04-15 hit all five paid services back-to-back, plus two follow-up calls on the alternate stablecoin so the on-chain footprint spans seven independent settlements. Each call:
+A deterministic coverage sweep on 2026-04-15 hit all five core research and signal services back-to-back, plus two follow-up calls on the alternate stablecoin so the on-chain footprint spans seven independent settlements. The two v2 additions (`research-deep-dive` via the Sub-agent and `action-swap-exec`) were added after the sweep and exercise the same x402 payment flow. Each call:
 
 1. fetched the route and got `402 + PAYMENT-REQUIRED`
 2. signed via the OKX Agentic Wallet's TEE (`onchainos payment x402-pay`)
@@ -160,9 +160,9 @@ Celina's external surface is entirely OnchainOS. Wallet identity and TEE signing
 
 | OnchainOS module | How Celina uses it | Code location |
 |---|---|---|
-| `okx-agentic-wallet` | Single AK login creates two X Layer accounts. The Consumer switches to its own account before each research session and reads its USDG balance for the dashboard card. | [`packages/onchain-clients/src/wallet.ts`](packages/onchain-clients/src/wallet.ts) |
-| `okx-x402-payment` | Non-interactive CLI signs the `transferWithAuthorization` payload for each paid service call. | [`packages/onchain-clients/src/x402-payment.ts`](packages/onchain-clients/src/x402-payment.ts) |
-| OKX Facilitator API | Producer calls `/api/v6/pay/x402/verify` before returning research data and `/api/v6/pay/x402/settle` after, authenticated via HMAC-SHA256 with `OK-ACCESS-*` headers. | [`packages/okx-auth/src/sign.ts`](packages/okx-auth/src/sign.ts), [`apps/producer/src/facilitator/client.ts`](apps/producer/src/facilitator/client.ts) |
+| `okx-agentic-wallet` | Single AK login owns three X Layer accounts (Consumer, Producer, Sub-agent). Each process calls `switchAccount` to its own id before signing, and the Consumer also reads its USDG balance through this module for the dashboard balance card. | [`packages/onchain-clients/src/wallet.ts`](packages/onchain-clients/src/wallet.ts) |
+| `okx-x402-payment` | Non-interactive CLI signs the `transferWithAuthorization` payload for each paid service call. The Sub-agent reuses the same client to pay the Producer under Account 3. | [`packages/onchain-clients/src/x402-payment.ts`](packages/onchain-clients/src/x402-payment.ts) |
+| OKX Facilitator API | Producer and Sub-agent both call `/api/v6/pay/x402/verify` before returning research data and `/api/v6/pay/x402/settle` after, authenticated via HMAC-SHA256 with `OK-ACCESS-*` headers. The shared gate and facilitator client live in `@x402/x402-server`. | [`packages/okx-auth/src/sign.ts`](packages/okx-auth/src/sign.ts), [`packages/x402-server/src/facilitator-client.ts`](packages/x402-server/src/facilitator-client.ts) |
 | OKX MCP Server | JSON-RPC over HTTP with 7 tools wired up: `dex-okx-market-token-price-info`, `dex-okx-market-token-holder`, `dex-okx-market-candlesticks`, `dex-okx-market-trades`, `dex-okx-dex-quote`, `dex-okx-balance-total-token-balances`, `dex-okx-balance-total-value`. Every call is logged to the `mcp_calls` table and surfaced on the `/mcp` dashboard page. | [`packages/mcp-client/src/client.ts`](packages/mcp-client/src/client.ts), [`apps/producer/src/routes/`](apps/producer/src/routes/) |
 | OKX Security module | Two separate endpoints. `tokenScan` returns the 23-field risk report that `research-token-report` filters down to 17 actionable flags and that `signal-new-token-scout` checks for 6 blocking flags. `approvals` returns outstanding token approvals for a wallet and is used by `research-wallet-risk` to estimate attack surface. | [`packages/onchain-clients/src/security.ts`](packages/onchain-clients/src/security.ts) |
 | `okx-dex-trenches` | `memepump token-dev-info` + `memepump token-bundle-info` provide dev rug-pull history, sniper counts, and bundle-launch detection. Used by the token report and the new-token scout. | [`packages/onchain-clients/src/trenches.ts`](packages/onchain-clients/src/trenches.ts) |
@@ -172,7 +172,7 @@ Uniswap AI is not used: X Layer does not host a canonical Uniswap deployment, so
 
 ## The paid research services
 
-Seven paid services are available. Five live directly on the Producer (`:3001`); one is served by the Sub-agent (`:3003`) as an agent-to-agent composed call; one executes a real DEX swap. Prices are USDG minimal units (6 decimals).
+Seven paid services are available. Six live on the Producer (`:3001`): the five core research and signal routes plus the real DEX swap (`action-swap-exec`). The seventh lives on the Sub-agent (`:3003`) as an agent-to-agent composed call. Prices are USDG minimal units (6 decimals).
 
 ### Service catalog
 
@@ -253,7 +253,7 @@ The full prompt that teaches the model what each service does, including the pri
 
 ### Calling a service from outside Celina
 
-The five routes are normal HTTP endpoints, so anything that can do the x402 dance can hit them. The deterministic coverage script at [`scripts/src/spikes/research-routes-smoke.ts`](scripts/src/spikes/research-routes-smoke.ts) drives every route at the OnchainOS client level (bypassing Fastify) for live-data verification, and the same wire format is exercised end-to-end via the Consumer in `session-runner.ts` and reproduced in the worked-example sweep above. The seven settled tx hashes in the [Verified end-to-end on chain 196](#verified-end-to-end-on-chain-196) section were each produced by exactly this flow.
+All seven routes are normal HTTP endpoints, so anything that can do the x402 dance can hit them. The deterministic coverage script at [`scripts/src/spikes/research-routes-smoke.ts`](scripts/src/spikes/research-routes-smoke.ts) drives every route at the OnchainOS client level (bypassing Fastify) for live-data verification, and the same wire format is exercised end-to-end via the Consumer in `session-runner.ts` and reproduced in the worked-example sweep above. The seven settled tx hashes in the [Verified end-to-end on chain 196](#verified-end-to-end-on-chain-196) section were each produced by exactly this flow. `research-deep-dive` additionally produces two nested settlements because the Sub-agent itself signs x402 payments to the Producer for the two upstream services it composes.
 
 ## Running It Locally
 
@@ -277,14 +277,18 @@ cp .env.example .env
 # the dashboard to the repo-root .env we just populated.
 ln -s ../../.env apps/dashboard/.env
 
+# Create three agent accounts under one AK login: Consumer (Account 1,
+# created automatically), Producer (Account 2), and Sub-agent (Account 3).
 onchainos wallet login
-onchainos wallet add                  # creates Account 2 for Producer
-onchainos wallet status               # copy Account 1 id
-onchainos wallet switch <producer-id> # copy Producer address
-onchainos wallet switch <consumer-id> # copy Consumer address
-# Fill CONSUMER_ACCOUNT_ID, PRODUCER_ACCOUNT_ID, CONSUMER_ADDRESS, PRODUCER_ADDRESS in .env
+onchainos wallet add                   # creates Account 2 for Producer
+onchainos wallet add                   # creates Account 3 for Sub-agent
+onchainos wallet status                # list all three ids + addresses
+# Fill CONSUMER_ACCOUNT_ID + CONSUMER_ADDRESS (Account 1),
+#      PRODUCER_ACCOUNT_ID + PRODUCER_ADDRESS (Account 2),
+#      SUBAGENT_ACCOUNT_ID + SUBAGENT_ADDRESS (Account 3) in .env
 
-# Send 5 to 10 USDG to the Consumer X Layer address
+# Send 5 to 10 USDG to the Consumer X Layer address and ~1 USDG to the
+# Sub-agent address (the Sub-agent pays the Producer on deep-dive calls).
 pnpm health-check
 ```
 
@@ -308,32 +312,31 @@ pnpm dev:dashboard     # Next.js :3000
 
 Open http://localhost:3000, type a question into the AskBox, and watch Celina plan, pay, and synthesize in real time. Every call on the report card links to its X Layer settlement tx on OKLink.
 
+The dashboard exposes five secondary pages backed by the same shared SQLite:
+
+- `/tx` — every settled x402 payment with its on-chain hash for click-through auditing on OKLink
+- `/mcp` — live rolling log of every MCP tool call the Producer makes, with success rate and average latency
+- `/learning` — per-service performance leaderboard: call count, useful/wasted split, average usefulness, trend badge. Shows how Celina's planner improves across sessions.
+- `/compare` — side-by-side table: Celina vs manual research time (15–90 min manual vs 6–35 sec Celina) with a full price breakdown per service
+- `/memory` — active session memory table: question, cached verdict, confidence, embedding type (384-dim vs fallback), time-to-expiry
+
+A machine-readable capability manifest is exposed at `GET /capabilities` on the Consumer API and duplicated in [`SKILL.md`](SKILL.md) for agent-to-agent discovery. The threat model is in [`threat-model.md`](threat-model.md).
+
 ### Docker Compose
 
 ```bash
 cp .env.example .env
-# Fill OKX_API_KEY, OKX_SECRET_KEY, OKX_PASSPHRASE, GROQ_API_KEY,
-# CONSUMER_ACCOUNT_ID, PRODUCER_ACCOUNT_ID, CONSUMER_ADDRESS, PRODUCER_ADDRESS
+# Fill all required vars (OKX_*, GROQ_API_KEY, CONSUMER_*, PRODUCER_*, SUBAGENT_*)
 docker compose up --build
 ```
 
 All four services start with health checks and a shared `db_data` volume for the SQLite file. The Consumer's `transformers_cache` volume persists the `all-MiniLM-L6-v2` model weights (~22 MB downloaded on first embed call).
 
-The dashboard exposes five secondary pages backed by the same shared SQLite:
-
-- `/tx` — every settled x402 payment with on-chain hash for click-through auditing on OKLink
-- `/mcp` — live rolling log of every MCP tool call the Producer makes, with success rate and average latency
-- `/learning` — per-service performance leaderboard: call count, useful/wasted split, average usefulness, trend badge. Shows how Celina's planner improves over sessions.
-- `/compare` — side-by-side table: Celina vs manual research time (15–90 min manual vs 6–35 sec Celina) with full price breakdown per service
-- `/memory` — active session memory table: question, cached verdict, confidence, embedding type (384-dim vs fallback), time-to-expiry
-
-A machine-readable capability manifest is at `GET /capabilities` on the Consumer API and in [`SKILL.md`](SKILL.md) for agent-to-agent discovery.
-
 ### Tests
 
 ```bash
-pnpm -r typecheck      # 12 packages
-pnpm -r test           # unit tests across all packages
+pnpm -r typecheck      # 12 packages, all green
+pnpm -r test           # 87 unit tests across the 12 packages
 ```
 
 ## Team
