@@ -309,13 +309,35 @@ async function callTool(
   temperature: number
 ): Promise<ToolCallOutcome> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const response = await client.chat.completions.create({
-      model,
-      messages,
-      tools: [tool],
-      tool_choice: toolChoice,
-      temperature,
-    });
+    let response: Awaited<ReturnType<typeof client.chat.completions.create>>;
+    try {
+      response = await client.chat.completions.create({
+        model,
+        messages,
+        tools: [tool],
+        tool_choice: toolChoice,
+        temperature,
+      });
+    } catch (err) {
+      // Groq returns 400 when the model emits a tool-call argument that fails
+      // the JSON schema enum check (e.g. a hallucinated service name). Retry
+      // once; on second failure propagate the Groq `failed_generation` body so
+      // the session runner logs show exactly which field the model violated
+      // instead of the generic "Failed to call a function" message.
+      if (attempt === 1) {
+        const apiErr = err as { error?: { failed_generation?: unknown; message?: string } };
+        const failed = apiErr?.error?.failed_generation;
+        if (failed !== undefined) {
+          const rendered =
+            typeof failed === 'string' ? failed : JSON.stringify(failed);
+          throw new Error(
+            `${(err as Error).message} | failed_generation=${rendered.slice(0, 600)}`
+          );
+        }
+        throw err;
+      }
+      continue;
+    }
 
     const choice = response.choices[0];
     const toolCalls = choice?.message?.tool_calls ?? [];
